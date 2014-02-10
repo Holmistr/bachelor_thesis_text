@@ -119,7 +119,45 @@ TODO: klíčová slova
 \chapter{Úvod}
 Úvod
 
-\chapter{Fulltextové vyhledávání}
+\chapter{Vyhledávání}
+Tato kapitola stručně popisuje způsob vyhledávání v nejčastějším datovém úložišti - relačních databázích - a uvádí jeho nedostatky. Poté se detailněji věnuje jednou z možností jejich řešení, a to fulltextovým vyhledáváním. Uvádí nezbytnou 
+teorii k pochopení principů, jak fulltextové vyhledávání funguje, jeho výhody a nevýhody.
+
+\section{Vyhledávání v relačních databázích}
+Relační databáze poskytují vysoce výkonný přístup k datům a široké možnosti pro jejich správu. Díky svých schopnostem se staly nejpoužívanější technologií pro datové uložiště. 
+Vyhledávat v datech lze přitom pouze dvěma způsoby: porovnání obsahu buňky a operátor LIKE.
+
+Porovnání obsahu buňky funguje na velice jednoduchém principy úplné shody obsahu. V následujícím příkladu vidíme dotaz v jazyce SQL, který vybere právě ty záznamy z tabulky People, které mají hodnotu atributu name rovnou "Bruce Banner". 
+SELECT * FROM People WHERE name = 'Bruce Banner'
+
+Nebudou tedy vybrány žádné jiné záznamy, přestože by obsah atributu name měly např. "Bruce Banners" či dokonce ani "Bruce Banner " (přebytečná mezera na konci). Výhodou tohoto řešení je efektivita a jednoduchost - jedinná nutná operace je 
+pouze porovnání dvou řetěžců, žádné dodatečné zpracování není potřeba. 
+
+Trochu více sofistikovaným způsobem je operator LIKE, který umožňuje (v omezené míře) používat pattern matching - vyhledávání pomocí vzoru. Podporovány jsou tzv. zástupné symboly, jež mohou mít v tomto kontextu jiný význam než jen právě daný znak, např. symbol \% 
+(procento) zastupuje libovolnou sekvenci znaků (třeba i žádnou) nebo znak . (tečka) libovolný, ale právě jeden znak. Níže vidíme příklad SQL dotazu, jenž nám vrátí všechny záznamy z tabulky People, které jejich jméno končí na "Banner".
+SELECT * FROM People WHERE name LIKE '%Banner'
+
+Nyní již dokázeme tímto dotazem získat jak lidi se jménem "Bruce Banner", tak i "Richard Banner". 
+
+\section{Problémy vyhledávání v relačních databázích}
+V předchozí kapitole jsme si představili základní způsoby vyhledávání v relačních databázích. Nyní se podíváme na případy, kde nám tyto způsoby nestačí nebo si s danou situací nedokáží poradit buď vůbec, nebo pouze neefektivně.
+
+\subsection{Vyhledávání přes několik tabulek}
+
+
+\subsection{Vyhledávání jednotlivých slov}
+
+\subsection{Filtrace šumu}
+
+\subsection{Vyhledávání příbuzných slov}
+
+\subsection{Oprava překlepů}
+
+\subsection{Relevance}
+
+\section{Fulltextové vyhledávání}
+
+
 
 \chapter{Dostupné technologie}
 \section{Apache Lucene}
