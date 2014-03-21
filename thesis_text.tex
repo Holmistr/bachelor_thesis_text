@@ -68,7 +68,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Title page information
-\thesistitle{Implementace fulltextového vyhledávání v issue tracking systému}
+\thesistitle{Implementace fulltextového vyhledávání v systému správy požadavků}
 \thesissubtitle{Bakalářská práce}
 \thesisstudent{Jiří Holuša}
 \thesiswoman{false} %% Important when using Slovak or Czech lang
@@ -130,7 +130,7 @@ teorii k pochopení principů, jak fulltextové vyhledávání funguje, jeho vý
 Relační databáze poskytují vysoce výkonný přístup k datům a široké možnosti pro jejich správu. Díky svých schopnostem se staly nejpoužívanější technologií pro datové uložiště. 
 Vyhledávat v datech lze přitom pouze dvěma způsoby: porovnání obsahu buňky a operátor LIKE.
 
-Porovnání obsahu buňky funguje na velice jednoduchém principy úplné shody obsahu. V následujícím příkladu vidíme dotaz v jazyce SQL, který vybere právě ty záznamy z tabulky People, které mají hodnotu atributu name rovnou "Bruce Banner". 
+Porovnání obsahu buňky funguje na velice jednoduchém principu úplné shody obsahu. V následujícím příkladu vidíme dotaz v jazyce SQL, který vybere právě ty záznamy z tabulky People, které mají hodnotu atributu name rovnou "Bruce Banner". 
 \begin{verbatim}
 SELECT * FROM People WHERE name = 'Bruce Banner'
 \end{verbatim}
@@ -197,14 +197,30 @@ další knihy o fulltextovém vyhledávání, jelikož naše kniha "nejvíce" od
 V předchozí kapitole jsme si uvedli, jaké problémy má vyhledávání pouze pomocí SQL. Nyní si představíme možné řešení - fulltextové vyhledávání. 
 
 \subsection{Úvod do fulltextového vyhledávání}
+Fulltextové vyhledávání (někdy také fulltext nebo full-text) je speciální způsob vyhledávání informací v textu. Vyhledávání probíhá porovnáváním s každým slovem v hledaném textu. Jelikož počet slov v textu může teoreticky neomezený a jelikož je 
+nutné, aby vyhledávání bylo co nejrychlejší, funguje fulltextové vyhledávání ve dvou fázích: indexace a hledání. 
 
 \subsection{Indexace}
+Indexace je proces předpřipravení dat, ve kterých se následně bude hledat. Spočívá ve zpracování textu předem, ve sběru takových informací o struktuře textu, s jejichž využitím následně dokážeme vlastní hledaní enormně zrychlit, a tak zachovat rychlost
+hledání i nad velkým množstvím textu.
+
+Hlavním úkolem indexace je rozdělit text do slov a následně vybudovat datovou strukturu, v níž jde efektivně nalézt hledané slovo. Této datové struktuře se říká index, ve které si fulltextové vyhledávání poznačí pro každé slovo všechny pozice, na kterých se
+vyskytuje. 
+
+Kromě této zcela základní informace se dá dále sbírat mnoho doplňkových informací, například četnost výskytu jednotlivých slov.
 
 \subsection{Hledání}
-
+Samotné vyhledávání v textu je ve fulltextovém vyhledávání realizováno nikoliv nad textem samotným, ale nad předpřipraveným indexem z procesu indexace. Vyhledávácí nástroj tedy může využít doplňkových informací o textu, které dokáží vyhledávání 
+podstatně zrychlit.
 
 \chapter{Dostupné technologie}
+Na platformě Java existuje řada dostupných volně širitelných vyhledávacích technologií. Nyní si představíme tři z nich: Apache Lucene, Hibernate Search a následující kapitole trochu podrobněji Elasticsearch.
+
 \section{Apache Lucene}
+Lucene je vysoce výkonná, škálovatelná, volně širitelná vyhledávací knihovna celá napsána v jazyce Java. Již několik let je nejpopulárnější vyhledávací technologií na této platformě. Díky své popularitě se však dočkala i přepsání do dalších jazyků jako například
+Perl, Python, Ruby, C/C++, PHP a C\# (.NET). 
+
+Je nutno podotknout, že Lucene není žádný vyhledávací produkt, hotová aplikace. Lucene je pouze nástroj, se kterým se dají takové aplikace naprogramovat.
 
 \section{Hibernate Search}
 
@@ -226,7 +242,14 @@ Jedním z prvních možných řešení indexace je prostá manuální tvorba ind
 Nevýhoda tohoto řešení je zjevná - nulová flexibilita. Při každé úpravě entity je nutné dopsat odpovídající mechanismus, který upravený atribut denormalizuje. Navíc je toto řešení udělané přesně na míru tomuto projektu, resp. přesně danému modelu entit,
 tudíž není znovupoužitelné do budoucna. Výhoda je ovšem rovněž zřejmá - jednoduchost. K naprogramování takového mechanismu není potřeba víc než základní znalost jazyka Java.
 
-Rozhodli jsme se však ubírat jinou, sofistikovanější, cestou. Denormalizace je řešena pomocí anotací velice podobně jako v Hibernate Search. 
+Rozhodli jsme se však ubírat jinou, sofistikovanější, cestou. Denormalizace je řešena pomocí anotací velice podobně jako v Hibernate Search. Myšlenkou bylo vytvořit samostatný projekt, který máambice se později začlenit přímo do projektu
+Elasticsearch. To však vyžaduje vytvořit robustní a široce použitelný nástroj, nikoliv na míru vytvořený pouze pro potřeby projektu eShoe. 
+
+Základem je použití anotací, což zaručuje vysokou eleganci a jednoduchost použití. Inspirace vzešla právě z Hibernate Search, tedy oanotovat datový model (entity) nově vytvořenými anotacemi tak, aby po předání takové entity našemu indexačnímu manažeru
+nástroj sám vytvořit příslušný JSON dokument, který by následně automaticky odeslat do Elasticsearch serveru. Tím se z pohledu klienta redukuje proces tvorby indexu na pouhé vybrání vlastností entit, podle kterých se následně bude vyhledávat a
+zavolání jediné metody, o vše ostatní se již nástroj postará sám.
+
+Přesně podle této myšlenky byl založet nový projekt elasticsearch-annotations. Elasticsearch-annotations poskytuje velice malé veřejné API, což usnadňuje jeho použití. Jádrem projektu je třída IndexManager.
 
 \section{Vyhledávání}
 
