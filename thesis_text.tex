@@ -201,18 +201,17 @@ Fulltextové vyhledávání (někdy také fulltext nebo full-text) je speciáln�
 nutné, aby vyhledávání bylo co nejrychlejší, funguje fulltextové vyhledávání ve dvou fázích: indexace a hledání. 
 
 \subsection{Indexace}
-Indexace je proces předpřipravení dat, ve kterých se následně bude hledat. Spočívá ve zpracování textu předem, ve sběru takových informací o struktuře textu, s jejichž využitím následně dokážeme vlastní hledaní enormně zrychlit, a tak zachovat rychlost
-hledání i nad velkým množstvím textu.
+Indexace je hlavním krokem ve fulltextovém vyhledávání. Jedná se o proces předpřipravení vstupních dat, jejich přeměnu na co nejvíce efektivní datovou strukturu, aby se v ní dalo snadno a rychle vyhledávat. 
+Této datové struktuře, která je výstupem indexace, se říká index. 
 
-Hlavním úkolem indexace je rozdělit text do slov a následně vybudovat datovou strukturu, v níž jde efektivně nalézt hledané slovo. Této datové struktuře se říká index, ve které si fulltextové vyhledávání poznačí pro každé slovo všechny pozice, na kterých se
-vyskytuje. 
+Index si lze představit jako datovou struktu umožňující přímý přístup ke slovům v něm obsažených. Základním úkolem je rozdělit text do slov a pomocí přímého přístupu umožnit velice efektivně zjistit,
+kde se dané slovo vyskytuje.
 
-Pouhým rozdělením do slov však možnosti předpřipravení textu nekončí a může být zapojena složitá analýza. V praxi je pak každé slovo předáno analyzátoru, který může index libovolně upravovat, a tím ho lépe připravit na nadcházející dotazování, a umožnit mu odpovídat na složitější dotazy. Typickým příkladem možné analýzy 
-je úprava podstatných jmen do základního tvaru (např. z množného čísla na jednotné), přidání do indexu synonym či slov odvozených.
+Pouhým rozdělením do slov však možnosti předpřipravení textu nekončí a může být zapojena složitá analýza. V praxi (např. v Apache Lucene) je celý text předáván analyzátoru, který může index libovolně budovat, a tím ho lépe připravit na nadcházející dotazování, a umožnit mu odpovídat na složitější dotazy. Typickým příkladem možné analýzy 
+je úprava podstatných jmen do základního tvaru (např. z množného čísla na jednotné), přidání synonym do indexu či získávání statistiky o četnosti výskytu daného slova.
 
 \subsection{Hledání}
-Samotné vyhledávání v textu je ve fulltextovém vyhledávání realizováno nikoliv nad textem samotným, ale nad předpřipraveným indexem z procesu indexace. Vyhledávácí nástroj tedy může využít doplňkových informací o textu, které dokáží vyhledávání 
-podstatně zrychlit.
+Samotné vyhledávání v textu je ve fulltextovém vyhledávání realizováno nikoliv nad textem samotným, ale nad předpřipraveným indexem z procesu indexace. Vyhledávácí nástroj tedy může využít doplňkových informací o textu, které dokáží vyhledávání zrychlit. Jakým způsobem je index budován a jak se nad ním následně vyhledává, záleží pak již na konkrétní technologii.
 
 \chapter{Dostupné technologie}
 Na platformě Java existuje řada dostupných volně širitelných vyhledávacích technologií. Nyní si představíme tři z nich: Apache Lucene, Hibernate Search a následující kapitole trochu podrobněji Elasticsearch.
@@ -224,6 +223,25 @@ pro komunitu. O rok později byla adoptována organizací Apache Software Founda
 Již několik let je Lucene nejpopulárnější vyhledávací technologií zdarma. Díky své popularitě se však dočkala i přepsání do dalších jazyků než je Java jako například Perl, Python, Ruby, C/C++, PHP a C\# (.NET). Projekt je stále aktivně vyvíjen s širokou komunitní základnou.
 
 Apache Lucene není hotová vyhledávací aplikace, je to knihovna, nástroj, poskytující všechny potřebné prostředky, aby mohla být taková aplikace pro vyhledávání naprogramována. Nabízí rozhraní pro vytváření, úpravu indexu, zpracování dat před indexací a tvorbu, úpravu dotazů. O zbytek úkonů se musí programátor postarat sám, z čehož vyplývají hlavní výhoda (robustnost, univerzálnost použití), ale také hlavní nevýhoda (složitost nasazení).
+
+Používání Apache Lucene je poměrně náročné, což vychází z její univerzálnosti - uživatel (programátor) má mnoho možností, jak výslednou vyhledávací aplikaci nakonfigurovat, a tím i vyladit. Kvůli této složitosti
+začaly vznikat další technologie, které staví na Apache Lucene, snaží se schovat podrobná, a tedy i méně často používaná, nastavení do pozadí a umožnit tak vývojáři se v technologii rychle zorientovat se 
+zachováním původní síly Apache Lucene. Protože takových technologií existuje více (Apache Solr, Hibernate Search, Elasticsearch a další), je dobré při jejich používání vědět, jak funguje Apache Lucene na nižší úrovni, neboť tyto technologie Apache Lucene přímo využívají. Z toho důvodu si podrobněji představíme architekturu Apache Lucene, abychom poznali její sílu a možnosti.
+
+\section{Indexace}
+Abychom pochopili, jak funguje v Apache Lucene indexace, představíme si zběžně základní třídy:
+\begin{itemize}
+	\item IndexWriter
+	\item Directory
+	\item Analyzer
+	\item Document
+	\item Field
+\end{itemize}
+
+IndexWriter je hlavní komponenta indexace, vstupní bod. Je zodpovědná za vytváření nového indexu a přidávání dokumentů do indexů existujících. Neslouží k vyhledávání ani modifikaci indexu.
+
+Directory reprezentuje fyzické umístění indexu.
+
 
 \section{Hibernate Search}
 Po rozmachu technologie ORM na platformě Java a její nejznámější implementace Hibernate ORM bylo nutné rovněž dát tomuto nástroji možnosti fulltextového vyhledávání, o což se postarala právě knihovna Hibernate Search, která umožňuje Hibernate ORM fulltextové vyhledávání. Autorem je Emmanuel Bernard. 
