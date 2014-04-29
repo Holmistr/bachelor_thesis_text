@@ -207,7 +207,8 @@ hledání i nad velkým množstvím textu.
 Hlavním úkolem indexace je rozdělit text do slov a následně vybudovat datovou strukturu, v níž jde efektivně nalézt hledané slovo. Této datové struktuře se říká index, ve které si fulltextové vyhledávání poznačí pro každé slovo všechny pozice, na kterých se
 vyskytuje. 
 
-Kromě této zcela základní informace se dá dále sbírat mnoho doplňkových informací, například četnost výskytu jednotlivých slov.
+Pouhým rozdělením do slov však možnosti předpřipravení textu nekončí a může být zapojena složitá analýza. V praxi je pak každé slovo předáno analyzátoru, který může index libovolně upravovat, a tím ho lépe připravit na nadcházející dotazování, a umožnit mu odpovídat na složitější dotazy. Typickým příkladem možné analýzy 
+je úprava podstatných jmen do základního tvaru (např. z množného čísla na jednotné), přidání do indexu synonym či slov odvozených.
 
 \subsection{Hledání}
 Samotné vyhledávání v textu je ve fulltextovém vyhledávání realizováno nikoliv nad textem samotným, ale nad předpřipraveným indexem z procesu indexace. Vyhledávácí nástroj tedy může využít doplňkových informací o textu, které dokáží vyhledávání 
@@ -217,14 +218,23 @@ podstatně zrychlit.
 Na platformě Java existuje řada dostupných volně širitelných vyhledávacích technologií. Nyní si představíme tři z nich: Apache Lucene, Hibernate Search a následující kapitole trochu podrobněji Elasticsearch.
 
 \section{Apache Lucene}
-Lucene je vysoce výkonná, škálovatelná, volně širitelná vyhledávací knihovna celá napsána v jazyce Java. Již několik let je nejpopulárnější vyhledávací technologií na této platformě. Díky své popularitě se však dočkala i přepsání do dalších jazyků jako například
-Perl, Python, Ruby, C/C++, PHP a C\# (.NET). 
+Lucene je vysoce výkonná, škálovatelná, volně širitelná vyhledávací knihovna napsána v jazyce Java. Autorem projektu, který vznikl v roce 1997, je Doug Cutting. V roce 2000 zveřejnil Lucene na stránkách serveru SourceForge.com a uvolnil ji tak zdarma
+pro komunitu. O rok později byla adoptována organizací Apache Software Foundation. Od té doby se knihovna neustále vyvíjela a v dubnu roku 2014 je aktuálně dostupná ve své nejnovější verzi 4.7.1.
 
-Je nutno podotknout, že Lucene není žádný vyhledávací produkt, hotová aplikace. Lucene je pouze nástroj, se kterým se dají takové aplikace naprogramovat.
+Již několik let je Lucene nejpopulárnější vyhledávací technologií zdarma. Díky své popularitě se však dočkala i přepsání do dalších jazyků než je Java jako například Perl, Python, Ruby, C/C++, PHP a C\# (.NET). Projekt je stále aktivně vyvíjen s širokou komunitní základnou.
+
+Apache Lucene není hotová vyhledávací aplikace, je to knihovna, nástroj, poskytující všechny potřebné prostředky, aby mohla být taková aplikace pro vyhledávání naprogramována. Nabízí rozhraní pro vytváření, úpravu indexu, zpracování dat před indexací a tvorbu, úpravu dotazů. O zbytek úkonů se musí programátor postarat sám, z čehož vyplývají hlavní výhoda (robustnost, univerzálnost použití), ale také hlavní nevýhoda (složitost nasazení).
 
 \section{Hibernate Search}
+Po rozmachu technologie ORM na platformě Java a její nejznámější implementace Hibernate ORM bylo nutné rovněž dát tomuto nástroji možnosti fulltextového vyhledávání, o což se postarala právě knihovna Hibernate Search, která umožňuje Hibernate ORM fulltextové vyhledávání. Autorem je Emmanuel Bernard. 
+Svou popularitu získala především, jak již název napovídá, perfektní integrací s Hibernate ORM. Integrace do již existujícího systému na bázi Hibernate ORM je velice jednoduchá a přináší do aplikace možnost fulltextového vyhledávání s plnou silou Apache Lucene, neboť je na této technologii postavena.
 
 \section{Elasticsearch}
+Elasticsearch je realtime distribuovaný vyhledávácí a analytický nástroj. Historie této technologie se začala psát v roce 2004, kdy Shay Banon vytvořil Compass. Postupným vývojem a změnou požadavků však dospěl k názoru, že aby se mohl Compass stát distribuovanou technologií, bylo by zapotřebí ho značnou část přepsat.
+Rozhodl se proto naprogramovat zcela nový nástroj, který měl být již od počátku distribuovaný. První verze Elasticsearch byla vydána v únoru 2010.
+
+Elasticsearch je postaven na dříve představené technologii Apache Lucene, k níž však přidává další klíčové vlastnosti. Řeč je zejména o celé architektuře. Elasticsearch není na rozdíl od Apache Lucene knihovnou, Elasticsearch tvoří samostatný distribuovaný systém serverů, které na pozadí používají Apache Lucene, ovšem 
+skrývají její složitost a poskytují služby v mnohem jednodušším uživatelském API. Dalším rozdílem je pak to, že tyto služby jsou vystavují skrze REST API, čímž získáváme naprostou nezávislost na programovacím jazyku na rozdíl od Apache Lucene. 
 
 \chapter{Implementace}
 V předchozích kapitolách jsme si představili fulltextové vyhledávání a dostupné technologie pro jeho implementaci na platformě Java. 
