@@ -226,10 +226,10 @@ Apache Lucene není hotová vyhledávací aplikace, je to knihovna, nástroj, po
 
 Používání Apache Lucene je poměrně náročné, což vychází z její univerzálnosti - uživatel (programátor) má mnoho možností, jak výslednou vyhledávací aplikaci nakonfigurovat, a tím i vyladit. Kvůli této složitosti
 začaly vznikat další technologie, které staví na Apache Lucene, snaží se schovat podrobná, a tedy i méně často používaná, nastavení do pozadí a umožnit tak vývojáři se v technologii rychle zorientovat se 
-zachováním původní síly Apache Lucene. Protože takových technologií existuje více (Apache Solr, Hibernate Search, Elasticsearch a další), je dobré při jejich používání vědět, jak funguje Apache Lucene na nižší úrovni, neboť tyto technologie Apache Lucene přímo využívají. Z toho důvodu si podrobněji představíme architekturu Apache Lucene, abychom poznali její sílu a možnosti.
+zachováním původní síly Apache Lucene. Takových technologií existuje více (Apache Solr, Hibernate Search, Elasticsearch a další) a je dobré při jejich používání vědět, jak funguje Apache Lucene na nižší úrovni, neboť tyto technologie ji přímo využívají. Z toho důvodu si podrobněji představíme architekturu Apache Lucene, abychom poznali její sílu a možnosti.
 
-\section{Indexace}
-Abychom pochopili, jak funguje v Apache Lucene indexace, představíme si zběžně základní třídy:
+\subsection{Architektura}
+Abychom pochopili, jak Apache Lucene funguje, představíme si zběžně její architekturu. Níže následuje výčet základních tříd, které se podílejí na procesu indexace:
 \begin{itemize}
 	\item IndexWriter
 	\item Directory
@@ -238,9 +238,34 @@ Abychom pochopili, jak funguje v Apache Lucene indexace, představíme si zběž
 	\item Field
 \end{itemize}
 
-IndexWriter je hlavní komponenta indexace, vstupní bod. Je zodpovědná za vytváření nového indexu a přidávání dokumentů do indexů existujících. Neslouží k vyhledávání ani modifikaci indexu.
+IndexWriter je vstupní bod indexace. Je zodpovědná za vytváření nového indexu a přidávání dokumentů do indexů existujících. Neslouží k vyhledávání ani modifikaci indexu. IndexWriter musí znát umístění, kam má svůj index uložit
+a k tomu složí Directory. 
 
-Directory reprezentuje fyzické umístění indexu.
+Directory je abstraktní třída reprezentující fyzické umístění indexu.  
+
+Předtím než je text indexován, je předán analyzéru, implementaci abstraktní třídy Analyzer. Analyzer je zodpovědný za extrakci tokenů - základních jednotek, které následně budou skutečně uloženy do indexu - a eliminaci všeho ostatního. Analyzer je patrně nejdůležitější
+komponenta indexace, rozhoduje, které tokeny budou uloženy a dokáže je libovolně modifikovat. Apache Lucene obsahuje již některé praktické implementace třídy Analyzer, které jsou nejběžnější. Některé z nich  se například zabývají odstraněním šumu z textu, další převedením všech písmen na malá apod. Proces analýzy podrobněji rozebíráme v další kapitole, neboť je to klíčová vlastnost Apache Lucene, kterou dědí i ostatní technologie na ní postavené.
+
+Document reprezentuje kolekci polí (fields), je to kontejner pro objekty Field, které nesou textová data. 
+
+Field je základní jednotka, která obsahuje vlastní indexovaný text.
+
+Jak jsme si již řekli, fulltextové vyhledávání má dvě části - indexaci a vyhledávání. Protože však technologie postavené na Apache Lucene poskytují své vlastní vyhledávací API, a tím skrývájí vyhledávání v Apache Lucene úplně, nebudeme se detaily architektury vyhledávání v Apache Lucene dále zabývat. 
+
+\subsection{Indexace}
+V předchozí části jsme si popsali stručně architekturu indexační části Apache Lucene. Nyní si vysvětlíme, jak spolu jednotlivé části spolupracují.
+
+Základní jednotkou indexu Apache Lucene jsou dokumenty a pole. Dokument je kolekcí polí, které pak obsahují "skutečný" obsah. Každé pole má své jméno, textovou nebo binární hodnotu a seznam detailních operací, které popisují, co má Apache Lucene dělat s hodnotou pole při vytváření indexu. Abychom mohli indexovat naše uživatelská data (položky z databáze, PDF dokumenty, HTML stránky apod.), je potřeba je převést do formátu Apache Lucene dokumentu. Apache Lucene nemá ponětí o sématice obsahu, který indexuje. Převedením struktury našeho obsahu do struktury Lucene dokumentů se zabývá denormalizace.
+
+Denormalizace je proces převedení libovolné struktury dat do jednoduchého formátu klíč:hodnota. Uveďme příklad, když je taková transformace nutná. V databází jsou jednotlivé záznamy spojovány cizími klíči mezi různými tabulkami, vzniká mezi nimi nějaký vztah, jednotlivé záznamy se na sebe odkazují. V dokumentech Apache Lucene však žádná možnost odkazu či spojení není, jediný akceptovaný formát je, jak jsme si řekli, klíč:hodnota. Programátor musí vyřešit problém, jak data, ve kterých chce vyhledávat, denormalizuje. Apache Lucene nechává tuto část zcela na programátorovi, na rozdíl od na ní postavených technologiích jako např. Hibernate Search.
+
+Jednou z dalších důležitých věcí, které je potřeba vědět o Apache Lucene dokumentech, je absence jakéhokoliv pevného schématu jako např. u databází. Tato vlastnost se někdy označuje jako flexibilní schéma. 
+
+
+
+
+
+
 
 
 \section{Hibernate Search}
