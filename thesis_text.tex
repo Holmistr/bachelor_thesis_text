@@ -259,13 +259,26 @@ Základní jednotkou indexu Apache Lucene jsou dokumenty a pole. Dokument je kol
 
 Denormalizace je proces převedení libovolné struktury dat do jednoduchého formátu klíč:hodnota. Uveďme příklad, když je taková transformace nutná. V databází jsou jednotlivé záznamy spojovány cizími klíči mezi různými tabulkami, vzniká mezi nimi nějaký vztah, jednotlivé záznamy se na sebe odkazují. V dokumentech Apache Lucene však žádná možnost odkazu či spojení není, jediný akceptovaný formát je, jak jsme si řekli, klíč:hodnota. Programátor musí vyřešit problém, jak data, ve kterých chce vyhledávat, denormalizuje. Apache Lucene nechává tuto část zcela na programátorovi, na rozdíl od na ní postavených technologiích jako např. Hibernate Search.
 
-Jednou z dalších důležitých věcí, které je potřeba vědět o Apache Lucene dokumentech, je absence jakéhokoliv pevného schématu jako např. u databází. Tato vlastnost se někdy označuje jako flexibilní schéma. 
+Jednou z dalších důležitých věcí, které je potřeba vědět o Apache Lucene dokumentech, je absence jakéhokoliv pevného schématu jako např. u databází. Tato vlastnost se někdy označuje jako flexibilní schéma. Umožňuje nám například iterativně budovat index, protože nově nahraný index může být naprosto rozdílný, obsahovat jiná pole, od předchozího. Rovněž můžeme do jednoho dokumentu uložit indexy reprezentující zcela jiné entity.
 
+\subsection{Analýza}
+Výše jsme si představili fundamentální základy, na kterých Apache Lucene staví indexy, nyní si přiblížíme nejdůležitější část indexačního procesu - analýzu.
 
+Předpokládejme, že vstupní data máme již denormalizována do dokumentů, které jsou naplněny poli. Analýza v Apache Lucene je proces převedení textových polí do základní indexované podoby - do termů. Analyzérem nazýváme komponentu, která zajišťuje analýzu. Ukažme si několik typických příkladů, co analyzéry dělaji:
 
+\begin{itemize}
+	\item extrakce slov
+	\item zahození interpunkce
+	\item převod na malá písmena (normalizace)
+	\item redukce šumu
+	\item převod slova na jeho kořen (stemming)
+	\item převod slova na základní tvar (lemmatizace)
+	\item a další 
+\end{itemize}
 
+Samozřejmě je možné naprogramovat vlastní analyzér, některé úkony jsou však natolik běžné (jako například výše uvedené), že Apache Lucene přichází s několika zabudovanými analyzéry. Ty pro svou funkčnost využívají dva další typy komponent: tokenizéry (potomek třídy Tokenizer) a filtry (potomek TokenFilter). Obě dědí od abstraktní třídy TokenStream, zabývají se však rozdílnou částí zpracování vstupu. Tokenizér čte vstup a vytváří tokeny. Filtr bere jako vstup tokeny a na jejich základě vrátí nově vytvořený seznam tokenů. Tento seznam může vzniknout přidáním nových tokenů, úpravou existujících či odstraněním některých z nich. 
 
-
+Typické využití, kterého se drží i zabudované analyzéry, vypadá následovně. Analyzéru je předán vstup. Ten je rozdělen na tokeny pomocí jednoho tokenizéru. Následně jsou tokeny předány jednomu či více filtrům, čímž vznikne finální kolekce tokenů, která je předána jako výsledek analýzy.
 
 
 \section{Hibernate Search}
