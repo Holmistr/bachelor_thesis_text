@@ -29,7 +29,7 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
-\usepackage{verbatim} 
+\usepackage{listings} 
 
 
 %% Additional packages for colors, advanced
@@ -126,30 +126,38 @@ TODO: klíčová slova
 Úvod
 
 \chapter{Vyhledávání}
-Tato kapitola stručně popisuje způsob vyhledávání v~nejčastějším datovém úložišti -- relačních databázích -- a uvádí jeho nedostatky. Poté se detailněji věnuje jednou z~možností jejich řešení, a to fulltextovým vyhledáváním. Uvádí nezbytnou 
+Tato kapitola stručně popisuje způsob vyhledávání skrze SQL v~nejčastějším datovém úložišti -- relačních databázích -- a uvádí jeho nedostatky. Poté se detailněji věnuje jednou z~možností jejich řešení, a to fulltextovým vyhledáváním. Uvádí nezbytnou 
 teorii k~pochopení principů, jak fulltextové vyhledávání funguje.
 
-\section{Vyhledávání v~relačních databázích}
+\section{Vyhledávání pomocí SQL}
+\label{SQLsection}
 Relační databáze poskytují vysoce výkonný přístup k~datům a široké možnosti pro jejich správu. Díky svých schopnostem se staly nejpoužívanější technologií pro datové uložiště. Pro komunikaci s~nimi se využívá jazyk SQL, který nabízí pro vyhledávání v~datech pouze dva způsoby: porovnání obsahu buňky a operátor \texttt{LIKE} \cite{MistrovstviMySQL}.
 
-Porovnání obsahu buňky funguje na velice jednoduchém principu úplné shody obsahu. V~následujícím příkladu vidíme dotaz v~jazyce SQL, který vybere právě ty záznamy z~tabulky \texttt{People}, které mají hodnotu atributu \texttt{name} rovnou \uv{Bruce Banner}. 
-\begin{verbatim}
+Porovnání obsahu buňky funguje na velice jednoduchém principu úplné shody obsahu. Na obrázku ref{SQLexample1} vidíme dotaz v~jazyce SQL, který vybere právě ty záznamy z~tabulky \texttt{People}, které mají hodnotu atributu \texttt{name} rovnou \uv{Bruce Banner}. 
+\begin{figure}[!htbp]
+\begin{lstlisting}[frame=single]
 SELECT * FROM People WHERE name = 'Bruce Banner'
-\end{verbatim}
+\end{lstlisting}
+\caption{Jednoduché použití SQL pro vyhledávání pomocí úplné shody obsahu pole}
+\label{SQLexample1}
+\end{figure}
 
 Nebudou vybrány žádné jiné záznamy, přestože by obsah atributu \texttt{name} byl např. \uv{Bruce Banners} či dokonce ani \uv{Bruce Banner } (přebytečná mezera na konci). Výhodou tohoto řešení je efektivita a jednoduchost -- jediná nutná operace je 
 pouze porovnání dvou řetěžců, žádné dodatečné zpracování není potřeba. 
 
-Trochu více sofistikovaným způsobem je operator \texttt{LIKE}, který umožňuje (v omezené míře) používat vyhledávání pomocí vzoru (\emph{pattern matching}). Podporovány jsou tzv. zástupné symboly (\emph{wildcards}), jež mohou mít v~tomto kontextu jiný význam než jen právě daný znak, např. symbol \% (procento) zastupuje libovolnou sekvenci znaků (třeba i žádnou) nebo znak \_ (podtržítko) libovolný, ale právě jeden znak. Níže vidíme příklad SQL dotazu, jenž nám vrátí všechny záznamy z~tabulky \texttt{People}, které jejich jméno končí na \uv{Banner}.
-
-\begin{verbatim}
+Trochu více sofistikovaným způsobem je operator \texttt{LIKE}, který umožňuje (v omezené míře) používat vyhledávání pomocí vzoru (\emph{pattern matching}). Podporovány jsou tzv. zástupné symboly (\emph{wildcards}), jež mohou mít v~tomto kontextu jiný význam než jen právě daný znak, např. symbol \% (procento) zastupuje libovolnou sekvenci znaků (třeba i žádnou) nebo znak \_ (podtržítko) libovolný, ale právě jeden znak. Obrázek \ref{SQLexample2} ukazuje příklad SQL dotazu, jenž nám vrátí všechny záznamy z~tabulky \texttt{People}, které jejich jméno končí na \uv{Banner}.
+\begin{figure}[!htbp]
+\begin{lstlisting}[frame=single]
 SELECT * FROM People WHERE name LIKE '%Banner'
-\end{verbatim}
+\end{lstlisting}
+\caption{Použití SQL operátoru LIKE}
+\label{SQLexample2}
+\end{figure}
 
 Nyní již dokázeme tímto dotazem získat jak lidi se jménem \uv{Bruce Banner}, tak i \uv{Richard Banner}. 
 
-\section{Problémy vyhledávání v~relačních databázích}
-V předchozí kapitole jsme si představili základní způsoby vyhledávání v~relačních databázích. Nyní se podíváme na případy, kde nám tyto způsoby nestačí nebo si s~danou situací nedokáží poradit buď vůbec, nebo pouze neefektivně.
+\section{Problémy vyhledávání pomocí SQL}
+Předchozí kapitola představila základní způsoby vyhledávání pomocí SQL. Nyní se podíváme na případy, kde nám tyto způsoby nestačí nebo si s~danou situací nedokáží poradit buď vůbec, nebo pouze neefektivně.
 
 Abychom si mohli tyto nedostatky demostrovat na příkladech, uvažujme existenci jednoduché relační databáze s~následujícím schématem (obrázek \ref{example_schema}).
 
@@ -161,50 +169,56 @@ Abychom si mohli tyto nedostatky demostrovat na příkladech, uvažujme existenc
 	\label{example_schema}
 \end{figure}
 
-\subsection{Vyhledávání přes několik tabulek}
+\subparagraph{Vyhledávání přes několik tabulek}
 Představme si, že uživatel zadá do vyhledávacího políčka nějaký řetězec, na jehož základě očekává odpovídající výsledky. Vyvstává otázka, kde bychom měli zadanou frázi hledat. V~našem případě
 pravděpodobně v~nadpisu, popisu, ve jméně a příjmení autora, tam všude by se mohly nacházet informace, které uživatel hledal. 
 
-SQL nyní musí prohledat všechny zadané sloupce, které se však mohou nacházet v~různých tabulkách, což vede ke spojování tabulek. Výsledný dotaz by mohl vypadat například takto:
-\begin{verbatim}
-SELECT * FROM Book book LEFT JOIN book.authors author WHERE 
-book.title = ? OR book.description = ? 
-OR author.firstname = ? OR author.lastname = ?
-\end{verbatim}
+SQL nyní musí prohledat všechny zadané sloupce, které se však mohou nacházet v~různých tabulkách, což vede ke spojování tabulek. Možný příklad výsledného dotazu vidíme na obrázku \ref{SQLexample3}.
+\begin{figure}[h!]
+\begin{lstlisting}[frame=single]
+SELECT *
+FROM Kniha kniha 
+LEFT JOIN kniha.autor autor 
+WHERE kniha.titul = ? OR kniha.popis = ? OR 
+autor.jmeno= ? OR autor.prijmeni= ?
+\end{lstlisting}
+\caption{SQL dotaz vyhledávající přes několik tabulek}
+\label{SQLexample3}
+\end{figure}
 
 Je vidět, že i při relativně jednoduchém požadavku (vyhledáváme pouze ve čtyřech sloupcích) je výsledný dotaz poměrně složitý. Pokud bychom chtěli uživateli dát možnost využívat komplexnější
 dotazy, je otázka generování odpovídajích SQL dotazů netriviální. Navíc uvažme, že musíme spojit více tabulek, což může vést k~problémům s~efektivitou \cite[s.~9]{HibernateSearchAction}.
 
-\subsection{Vyhledávání jednotlivých slov}
-Jak jsme si řekli, SQL dokáže vyhledat v~jednotlivých sloupcích přesně zadanou frázi. Je ovšem velice nepravděpodobné, že sloupce v~databázi budou obsahovat přesně stejnou danou frázi, 
+\subparagraph{Vyhledávání jednotlivých slov}
+Kapitola \ref{SQLsection} ukázala, že SQL dokáže vyhledat v~jednotlivých sloupcích přesně zadanou frázi. Je ovšem velice nepravděpodobné, že sloupce v~databázi budou obsahovat přesně stejnou danou frázi, 
 hledání jednotlivých slov by nám velice zvýšilo pravděpodobnost nálezu \cite[s.~9]{HibernateSearchAction}. SQL však žádnou takovou funkcionalitu na dělení vět neposkytuje, je tedy nutné si větu předpřipravit explicitně (tj. rozdělit na slova),
 a poté spouštět vyhledávácí dotaz pro každé slovo zvlášť. Následně výsledky nějakým způsobem sloučit. Takové řešení však nebude dostatečně efektivní \cite[s.~10]{HibernateSearchAction}. 
 
-\subsection{Filtrace šumu}
+\subparagraph{Filtrace šumu}
 Některá slova ve větách nenesou vzhledem k~vyhledávání žádnou informační hodnotu, např. spojky či předložky či ještě lepším příkladem mohou být anglické neurčité členy. Taková slova se nazývají šum (\emph{noise}). Dále se pak některá slova v~určitém kontextu
 šumem stávají, např. slovo \uv{kniha} v~našem internetovém knihkupectví \cite[s.~9]{HibernateSearchAction}. Jelikož šum nenese žádnou informační hodnotu, měl by být při hledání ignorován. SQL nám opět neposkytuje žádný prostředek k~řešení tohoto problému.
 
-\subsection{Vyhledávání příbuzných slov}
+\subparagraph{Vyhledávání příbuzných slov}
 Je velice žádoucí, abychom se při vyhledávání mohli zaměřit pouze na význam hledaného slova, nikoliv na jeho tvar. Nemělo by záležet na tom, zda hledáme frázi \uv{fulltextové hledání} nebo \uv{fulltextových vyhledávání}, význam těchto frázi
 je stejný. Jinak řečeno, vyhledávání by mělo brát v~potaz i slova odvozená, se stejným kořenem. Ještě pokročilejším požadavkem by mohla být možnost zaměňovat slova s~jejich synonymy, např. \uv{upravit} a \uv{editovat} \cite[s.~10]{HibernateSearchAction}.
 
 SQL nám nenabízí možnost k~řešení těchto požadavků, klíčem by mohl být slovník příbuzných slov a synonym a pokusit se vyhledávat i podle něj. Takové řešení však přináší nezanedbatelné množství práce, nehledě na nutnost existence takového slovníku.
 
-\subsection{Oprava překlepů}
+\subparagraph{Oprava překlepů}
 Uživatel je člověk a jako člověk je omylný a dělá chyby. Vyhledávání by to mělo brát v~potaz a snažit se tyto překlepy opravit či uhodnout, co měl uživatel na mysli. Když v~našem internetovém knihkupectví uživatel hledá knihu \uv{Fulltextové vyhledávání} a
 omylem zadá do vyhledávacího pole \uv{Fulltetové vyhledávání}, je žádoucí, aby i přes tento překlep knihu našel \cite[s.~10]{HibernateSearchAction}.
 
-\subsection{Relevance}
-Pravděpodobně největším problémem v~SQL je absence jakéhokoliv mechanismu pro určení míry shody (\emph{relevance}) záznamu se zadaným dotazem \cite[s.~10]{HibernateSearchAction}. Předpokládejme, že v~našem knihkupectví napsal autor \uv{John Smith} 100 knih, jednu o~fulltextovém vyhledávání a 
-zbytek naprosto nesouvisející s~informatikou. Dále několik dalších autorů rovněž napsalo publikace na téma fulltextového vyhledávání.
+\subparagraph{Relevance}
+Pravděpodobně největším problémem v~SQL je absence jakéhokoliv mechanismu pro určení míry shody (\emph{relevance}) záznamu se zadaným dotazem \cite[s.~10]{HibernateSearchAction}. Předpokládejme, že v~našem knihkupectví napsal autor \uv{John Smith} 100 knih, jednu o~fulltextovém vyhledávání a zbytek naprosto nesouvisející s~informatikou. Dále několik dalších autorů rovněž napsalo publikace na téma fulltextového vyhledávání.
 
 Pokud jako uživatel víme, že je autorem John Smith a kniha je o~fulltextovém vyhledávání, očekáváme, že na vyhledávací dotaz \uv{John Smith fulltextové vyhledávání} obdržíme nejdříve právě chtěnou knihu, a poté teprve knihy ostatní od našeho autora či
 další knihy o~fulltextovém vyhledávání, jelikož naše kniha \uv{nejvíce} odpovídala položenému dotazu.
 
 \section{Fulltextové vyhledávání}
-V předchozí kapitole jsme si uvedli, jaké problémy má vyhledávání pomocí SQL. Nyní si představíme možné řešení -- fulltextové vyhledávání. 
+Předchozí kapitola demostrovala, jaké problémy má vyhledávání pomocí SQL. Nyní si bude představeno možné řešení -- fulltextové vyhledávání. 
 
 \subsection{Úvod do fulltextového vyhledávání}
+\label{UvodDoFulltextu}
 Fulltextové vyhledávání (někdy také \emph{fulltext} nebo \emph{full-text}) je speciální způsob vyhledávání informací v~textu. Vyhledávání probíhá porovnáváním s~každým slovem v~hledaném textu. Jelikož počet slov v~textu může teoreticky neomezený a jelikož je 
 nutné, aby vyhledávání bylo co nejrychlejší, funguje fulltextové vyhledávání ve dvou fázích: \emph{indexace} a \emph{hledání} \cite[s.~11]{HibernateSearchAction}. 
 
@@ -257,10 +271,10 @@ Předtím než je text indexován, je předán analyzéru, implementaci abstrakt
 
 \texttt{Field} je základní jednotka, která obsahuje vlastní indexovaný text.
 
-Jak jsme si již řekli, fulltextové vyhledávání má dvě části -- indexaci a vyhledávání. Protože však technologie postavené na Apache Lucene poskytují své vlastní vyhledávací API, a tím skrývájí vyhledávání v~Apache Lucene úplně, nebudeme se detaily architektury vyhledávání v~Apache Lucene dále zabývat. 
+Jak je uvedeno v kapitole \ref{UvodDoFulltextu}, fulltextové vyhledávání má dvě části -- indexaci a vyhledávání. Protože však technologie postavené na Apache Lucene poskytují své vlastní vyhledávací API, a tím skrývájí vyhledávání v~Apache Lucene úplně, nebudeme se detaily architektury vyhledávání v~Apache Lucene dále zabývat. 
 
 \subsection{Indexace}
-V předchozí části jsme si popsali stručně architekturu indexační části Apache Lucene. Nyní si vysvětlíme, jak spolu jednotlivé části spolupracují.
+Předchozí kapitola stručně popisuje architekturu indexační části Apache Lucene. Nyní si vysvětlíme, jak spolu jednotlivé části spolupracují.
 
 Základní jednotkou indexu Apache Lucene jsou \emph{dokumenty} (\emph{directories}) a \emph{pole} (\emph{fields}) \cite[s.~32]{LuceneAction}. Dokument je kolekcí polí, které pak obsahují \uv{skutečný} obsah. Každé pole má své jméno, textovou nebo binární hodnotu a seznam operací, které popisují, co má Apache Lucene dělat s~hodnotou pole při vytváření indexu. Abychom mohli indexovat naše uživatelská data (položky z~databáze, PDF dokumenty, HTML stránky apod.), je potřeba je převést do formátu Apache Lucene dokumentu. Apache Lucene nemá ponětí o~sématice obsahu, který indexuje. Převedením struktury našeho obsahu do struktury Lucene dokumentů, do dvojic klíč:hodnota, se zabývá \emph{denormalizace}.
 
@@ -270,7 +284,7 @@ Denormalizace je proces převedení libovolné struktury dat do jednoduchého fo
 Jednou z~dalších důležitých věcí, které je potřeba vědět o~Apache Lucene dokumentech, je absence jakéhokoliv pevného schématu jako např. u~databází. Tato vlastnost se někdy označuje jako \emph{flexibilní schéma} \cite[s.~34]{LuceneAction}. Umožňuje nám například iterativně budovat index, protože nově nahraný index může být naprosto rozdílný, obsahovat jiná pole, od předchozího. Rovněž můžeme do jednoho dokumentu uložit indexy reprezentující zcela jiné entity.
 
 \subsection{Analýza}
-V předchozích kapitolách jsme si představili fundamentální základy, na kterých Apache Lucene staví indexy, nyní se blíže podíváme nejdůležitější část indexačního procesu~--~analýzu.
+V předchozích kapitolách jsou uvedeny fundamentální základy, na kterých Apache Lucene staví indexy, nyní se blíže podíváme nejdůležitější část indexačního procesu~--~analýzu.
 
 Předpokládejme, že vstupní data máme již denormalizována do dokumentů, které jsou naplněny poli. Analýza v~Apache Lucene je proces převedení textových polí do základní indexované podoby -- do termů \cite[s.~28]{LuceneAction}. Analyzérem nazýváme komponentu, která zajišťuje analýzu. Ukažme si několik typických příkladů, co analyzéry dělají  \cite[s.~110]{LuceneAction}:
 
@@ -284,7 +298,7 @@ Předpokládejme, že vstupní data máme již denormalizována do dokumentů, k
 	\item a další 
 \end{itemize}
 
-Samozřejmě je možné naprogramovat vlastní analyzér, některé úkony jsou však natolik běžné (jako například výše uvedené), že Apache Lucene přichází s~několika zabudovanými analyzéry. Ty pro svou funkčnost využívají dva další typy komponent: \emph{tokenizéry} (potomky třídy \texttt{Tokenizer}) a \emph{filtry} (potomky třídy \texttt{TokenFilter})  \cite[s.~115]{LuceneAction}. Obě dědí od abstraktní třídy \texttt{TokenStream}, zabývají se však rozdílnou částí zpracování vstupu. Tokenizér čte vstup a vytváří tokeny. Filtr bere jako vstup tokeny a na jejich základě vrátí nově vytvořený seznam tokenů. Tento seznam může vzniknout přidáním nových tokenů, úpravou existujících či odstraněním některých z~nich. 
+Samozřejmě je možné naprogramovat vlastní analyzér, některé úkony jsou však natolik běžné (jako například výše uvedené), že Apache Lucene přichází s~několika zabudovanými analyzéry. Analyzéry pro svou funkčnost využívají dva další typy komponent: \emph{tokenizéry} (potomky třídy \texttt{Tokenizer}) a \emph{filtry} (potomky třídy \texttt{TokenFilter})  \cite[s.~115]{LuceneAction}. Obě dědí od abstraktní třídy \texttt{TokenStream}, zabývají se však rozdílnou částí zpracování vstupu. Tokenizér čte vstup a vytváří tokeny. Filtr bere jako vstup tokeny a na jejich základě vrátí nově vytvořený seznam tokenů. Tento seznam může vzniknout přidáním nových tokenů, úpravou existujících či odstraněním některých z~nich. 
 
 Typické využití, kterého se drží i zabudované analyzéry, vypadá následovně. Analyzéru je předán vstup. Ten je rozdělen na tokeny pomocí jednoho tokenizéru. Následně jsou tokeny předány jednomu či více filtrům, čímž vznikne finální kolekce tokenů, která je předána jako výsledek analýzy (obrázek \ref{AnalysisLucene}).
 
@@ -314,7 +328,27 @@ Představme si rovněž i několik základních filtrů  \cite[s.~118]{LuceneAct
 	\item \texttt{StandardFilter} - navržen pro spolupráci s~tokenizérem StandardTokenizer, odstraňuje tečky z~akronymů a \uv{'s} (apostrof následovaný písmenem s)
 \end{itemize}
 
-Aby byl výčet kompletní, následuje přehled zabudovaných analyzérů. Jak jsme si řekli, zabudované analyzéry jsou v~podstatě kombinací tokenizérů a filtrů, z~čehož je následně jasná jejich funkce  \cite[s.~112]{LuceneAction}.
+\begin{figure}[!htbp]
+\begin{lstlisting}[frame=single]
+WhitespaceAnalyzer:
+[The] [quick] [brown] [fox] [jumped]
+[over] [the] [lazy] [dog]
+
+SimpleAnalyzer:
+[the] [quick] [brown] [fox] [jumped] 
+[over] [the] [lazy] [dog]
+
+StopAnalyzer:
+[quick] [brown] [fox] [jumped] [over] [lazy] [dog]
+
+StandardAnalyzer:
+[quick] [brown] [fox] [jumped] [over] [lazy] [dog]
+\end{lstlisting}
+\caption{Použití zabudovaných analyzérů pro větu \emph{\uv{The quick brown fox jumped over the lazy dog}}}
+\label{AnalysisExample1}
+\end{figure}
+
+Aby byl výčet kompletní, následuje přehled zabudovaných analyzérů. Zabudované analyzéry jsou v~podstatě kombinací tokenizérů a filtrů, z~čehož je následně jasná jejich funkce  \cite[s.~112]{LuceneAction}.
 
 \begin{itemize}
 	\item \texttt{WhitespaceAnalyzer} - dělí text na tokeny pomocí tokenizéru \\ \texttt{WhitespaceTokenizer}
@@ -323,91 +357,82 @@ Aby byl výčet kompletní, následuje přehled zabudovaných analyzérů. Jak j
 	\item \texttt{StandardAnalyzer} - nejpropracovanější zabudovaný analyzér, využívá \texttt{LowerCaseTokenizer}, \texttt{StopFilter}, navíc však přidává i propracovanou logiku, která dokáže např. rozeznat e-mailové adresy, názvy společností atd.
 \end{itemize}
 
-Popis analýzy zakončeme ukázkou (obrázek \ref{AnalysisExample}), jaké tokeny jednotlivé zabudované analyzéry vytvoří ze dvou anglických vět \emph{\uv{The quick brown fox jumped over the lazy dog}} a \emph{\uv{XY\&Z Corporation - xyz@example.com}}.
+Popis analýzy zakončeme ukázkami, jaké tokeny jednotlivé zabudované analyzéry vytvoří ze dvou anglických vět \emph{\uv{The quick brown fox jumped over the lazy dog}} (obrázek \ref{AnalysisExample1}) a \emph{\uv{XY\&Z Corporation - xyz@example.com}} (obrázek \ref{AnalysisExample2}).
 
 \begin{figure}[!htbp]
-	\begin{verbatim}
-	Analyzuji: The quick brown fox jumped over the lazy dog:
+\begin{lstlisting}[frame=single]
+WhitespaceAnalyzer:
+[XY&Z] [Corporation] [-] [xyz@example.com]
 
-	WhitespaceAnalyzer:
-	[The] [quick] [brown] [fox] [jumped] [over] [the] [lazy] [dog]
+SimpleAnalyzer:
+[xy] [z] [corporation] [xyz] [example] [com]
 
-	SimpleAnalyzer:
-	[the] [quick] [brown] [fox] [jumped] [over] [the] [lazy] [dog]
+StopAnalyzer:
+[xy] [z] [corporation] [xyz] [example] [com]
 
-	StopAnalyzer:
-	[quick] [brown] [fox] [jumped] [over] [lazy] [dog]
-
-	StandardAnalyzer:
-	[quick] [brown] [fox] [jumped] [over] [lazy] [dog]
-
-	---------------------------------------------------------------
-
-	Analyzuji "XY&Z Corporation - xyz@example.com":
-
-	WhitespaceAnalyzer:
-	[XY&Z] [Corporation] [-] [xyz@example.com]
-
-	SimpleAnalyzer:
-	[xy] [z] [corporation] [xyz] [example] [com]
-
-	StopAnalyzer:
-	[xy] [z] [corporation] [xyz] [example] [com]
-
-	StandardAnalyzer:
-	[xy&z] [corporation] [xyz@example.com]
-	\end{verbatim}
-	\caption{Použití zabudovaných analyzérů v~Apache Lucene}
-	\label{AnalysisExample}
+StandardAnalyzer:
+[xy&z] [corporation] [xyz@example.com]
+\end{lstlisting}
+\caption{Použití zabudovaných analyzérů pro větu \emph{\uv{XY\&Z Corporation - xyz@example.com}}}
+\label{AnalysisExample2}
 \end{figure}
 
 \section{Hibernate Search}
 Po rozmachu technologie \emph{objektově relačního mapování} (ORM, \emph{Object-Relational Mapping}) na platformě Java a její nejznámější implementace Hibernate Core \cite[s.~29]{HibernateSearchAction} bylo nutné rovněž dát tomuto nástroji možnosti fulltextového vyhledávání, o~což se postarala právě knihovna Hibernate Search. Hibernate Search je volně šiřitelná knihovna napsaná Emmanuelem Bernardem, která doplňuje Hibernate Core o~možnosti fulltextového vyhledávání pomocí kombinace s~Apache Lucene  \cite[s.~29]{HibernateSearchAction}. Hibernate Search se snaží zabalit komplexnost Apache Lucene do jednoduší podoby a integrovat funkčnost do Hibernate ORM. S minimálním úsilím za nás řeší převod objektového datového modelu do podoby přijatelné pro Apache Lucene, čímž výrazně usnadňuje její použití.
 
+Obrázek \ref{ExampleHibernateSearch} demonstruje, jak snadno lze s~využitím Hibernate Search zpřístupnit entitu pro fulltextové vyhledávání. Entita musí být označena anotací \texttt{@Indexed}  \cite[s.~38]{HibernateSearchAction}. Dále přidáme anotaci \texttt{@DocumentId} k~primárnímu klíči, a poté označíme atributy, podle kterých chceme vyhledávat anotací \texttt{@Field}  \cite[s.~38]{HibernateSearchAction}. V~momentě uložení entity za nás Hibernate Search vyřeší přidání uvedených atributů do indexu, tedy denormalizuje entitu. Jelikož je to však pod povrchem stále Apache Lucene, máme k~dispozici všechny možnosti, které nám nabízí, nyní v~přístupnější formě.
+
 \begin{figure}[!htbp]
-\begin{verbatim}
+\begin{lstlisting}[frame=single]
 @Entity
 @Indexed
 public class Person {
 
-		@Id 
-		@GeneratedValue
-		@DocumentId
-		private Long id;
+	@Id 	@GeneratedValue
+	@DocumentId
+	private Long id;
 
-		@Field
-		private String firstName;
+	@Field
+	private String firstName;
 
-		@Field 
-		private String lastName;
-
-		...
-	}
-	\end{verbatim}
+	@Field 
+	private String lastName;
+}
+	\end{lstlisting}
 	\caption{Zpřístupnění entity pro vyhledávání v~Hibernate Search}
 	\label{ExampleHibernateSearch}
 \end{figure}
 
-Výše uvedený kus kódu (obrázek \ref{ExampleHibernateSearch}) demonstruje, jak snadno lze s~využitím Hibernate Search zpřístupnit entitu pro fulltextové vyhledávání. Entita musí být označena anotací \texttt{@Indexed}  \cite[s.~38]{HibernateSearchAction}. Dále přidáme anotaci \texttt{@DocumentId} k~primárnímu klíči, a poté označíme atributy, podle kterých chceme vyhledávat anotací \texttt{@Field}  \cite[s.~38]{HibernateSearchAction}. V~momentě uložení entity za nás Hibernate Search vyřeší přidání uvedených atributů do indexu, tedy denormalizuje entitu. Jelikož je to však pod povrchem stále Apache Lucene, máme k~dispozici všechny možnosti, které nám nabízí, nyní v~přístupnější formě.
-
 Integrace s~Hibernate Core za nás elegantně řeší jeden podstatný problém, který máme s~použitím čistě Apache Lucene - synchronizaci fulltextového indexu a obsahu databáze. Jsou to v~zásadě dvě zcela oddělená datová úložiště, která spolu úzce souvisí. Pokud používáme přímo Apache Lucene, je nutné se po manipulaci s~objektem v~databázi explicitně postarat o~úpravu příslušného indexu, což je pro programátora práce navíc. Oproti tomu Hibernate Search je navázán na události Hibernate Core, tudíž při úpravě objektu v~databázi je automaticky spuštěn proces aktualizace indexu, aby spolu byla data v~databázi a fulltextovém indexu synchronizována  \cite[s.~24]{HibernateSearchAction}. 
 
 \section{Elasticsearch}
-Elasticsearch je distribuovaný vyhledávácí a analytický nástroj v~reálném čase  \cite{ElasticsearchDefinitiveGuide}. Historie této technologie se začala psát v~roce 2004, kdy Shay Banon vytvořil \emph{Compass}. Postupným vývojem a změnou požadavků však dospěl k~názoru, že aby se mohl Compass stát distribuovanou technologií, bylo by zapotřebí ho značnou část přepsat. Rozhodl se proto naprogramovat zcela nový nástroj, který měl být již od počátku distribuovaný. První verze Elasticsearch byla vydána v~únoru 2010 \cite{ElasticsearchWiki}.
+Elasticsearch je distribuovaný vyhledávácí a analytický nástroj v~reálném čase \cite{ElasticsearchDefinitiveGuide}. Historie této technologie se začala psát v~roce 2004, kdy Shay Banon vytvořil \emph{Compass}. Postupným vývojem a změnou požadavků však dospěl k~názoru, že aby se mohl Compass stát distribuovanou technologií, bylo by zapotřebí ho značnou část přepsat. Rozhodl se proto naprogramovat zcela nový nástroj, který měl být již od počátku distribuovaný. První verze Elasticsearch byla vydána v~únoru 2010 \cite{ElasticsearchWiki}.
 
 Elasticsearch je rovněž postaven na dříve představené technologii Apache Lucene, k~níž však přidává další klíčové vlastnosti. Řeč je zejména o~celé architektuře. Elasticsearch není na rozdíl od Apache Lucene knihovnou, Elasticsearch tvoří samostatný distribuovaný systém serverů, které na pozadí používají Apache Lucene, ovšem skrývají její složitost a poskytují služby v~mnohem jednodušším uživatelském API. Velký důraz je kladen právě na distribuovanost celého systému, proto je Elasticsearch vysoce škálovatelný, schopný vytvořit klastr několika stovek serverů, a tím zajistit vysoký výkon i při několika petabajtech dat, což patří mezi hlavní přidanou hodnotu navrch k~Apache Lucene \cite{ElasticsearchDefinitiveGuide}.
 
 Základním způsobem komunikace se serverem Elasticsearch je REST (\emph{Representational State Transfer}) API posílající JSON (\emph{JavaScript Object Notation}) objekty. Tím získáváme naprostou nezávislost na programovacím jazyku, komunikace může probíhat přímo i z~příkazové řádky. Do některých jazyků, jako například Java, PHP, Python, však byli napsáni klienti, kteří umožňují komunikaci přímo z~onoho jazyka. Stejně jako Hibernate Search je tedy i Elasticsearch zaobalená knihovna Apache Lucene s~několika přidanými hodnotami \cite{ElasticsearchDefinitiveGuide}. 
 
-\chapter{Implementace}
-V předchozích kapitolách jsme si představili fulltextové vyhledávání a dostupné technologie pro jeho implementaci na platformě Java. 
+\chapter{Návrh a implementace}
+Předchozí kapitoly představily fulltextové vyhledávání a dostupné technologie pro jeho implementaci na platformě Java. 
 
 Nyní se věnujeme skutečné implementaci fulltextového vyhledávání v~systému správy požadavků eShoe. Celou implementaci lze rozdělit na několik částí: výběr technologie, indexace, vyhledávání a import dat.
 
-\section{Výběr technologie}
-Pro vlastní implementaci byla zvolena technologie Elasticsearch. 
+\section{Specifikace požadavků}
+Specifikace
 
-\section{Indexace}
+\section{Návrh}
+Návrh
+
+\section{Použité technologie}
+\subsection{JBoss AS}
+\subsection{Maven}
+\subsection{Git}
+\subsection{Jackson}
+\subsection{ANTLR}
+
+\section{Implementace}
+
+\subsection{Indexace}
 První z~problémů, který je potřeba vyřešit, je zvládnutí procesu indexace, tedy denormalizaci entit do formátu, jež se dá přímo předat Elasticsearch serveru. Jak již víme, Elasticsearch příjímá JSON-like objekty,
 tedy dvojce klíč - hodnota.
 Jedním z~prvních možných řešení indexace je prostá manuální tvorba indexu z~entity pomocí get metod, tedy pro každou třídu je vytvořen mechanismus, který v~předem daném pořadí předem dané atributy získá a vytvoří z~nich index.
@@ -424,9 +449,11 @@ zavolání jediné metody, o~vše ostatní se již nástroj postará sám.
 
 Přesně podle této myšlenky byl založet nový projekt elasticsearch-annotations. Elasticsearch-annotations poskytuje velice malé veřejné API, což usnadňuje jeho použití. Jádrem projektu je třída IndexManager.
 
-\section{Vyhledávání}
+\subsection{Vyhledávání}
 
-\section{Import dat}
+\subsection{Uživatelské rozhraní}
+
+\subsection{Import dat}
 
 \chapter{Závěr}
 Závěr
