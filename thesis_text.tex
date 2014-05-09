@@ -133,7 +133,7 @@ teorii k~pochopení principů, jak fulltextové vyhledávání funguje.
 \label{SQLsection}
 Relační databáze poskytují vysoce výkonný přístup k~datům a široké možnosti pro jejich správu. Díky svých schopnostem se staly nejpoužívanější technologií pro datové uložiště. Pro komunikaci s~nimi se využívá jazyk SQL, který nabízí pro vyhledávání v~datech pouze dva způsoby: porovnání obsahu buňky a operátor \texttt{LIKE} \cite{MistrovstviMySQL}.
 
-Porovnání obsahu buňky funguje na velice jednoduchém principu úplné shody obsahu. Na obrázku ref{SQLexample1} vidíme dotaz v~jazyce SQL, který vybere právě ty záznamy z~tabulky \texttt{People}, které mají hodnotu atributu \texttt{name} rovnou \uv{Bruce Banner}. 
+Porovnání obsahu buňky funguje na velice jednoduchém principu úplné shody obsahu. Na obrázku \ref{SQLexample1} vidíme dotaz v~jazyce SQL, který vybere právě ty záznamy z~tabulky \texttt{People}, které mají hodnotu atributu \texttt{name} rovnou \uv{Bruce Banner}. 
 \begin{figure}[!htbp]
 \begin{lstlisting}[frame=single]
 SELECT * FROM People WHERE name = 'Bruce Banner'
