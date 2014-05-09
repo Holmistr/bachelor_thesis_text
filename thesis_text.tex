@@ -129,7 +129,7 @@ TODO: klíčová slova
 Tato kapitola stručně popisuje způsob vyhledávání skrze SQL v~nejčastějším datovém úložišti -- relačních databázích -- a uvádí jeho nedostatky. Poté se detailněji věnuje jednou z~možností jejich řešení, a to fulltextovým vyhledáváním. Uvádí nezbytnou 
 teorii k~pochopení principů, jak fulltextové vyhledávání funguje.
 
-\section{Vyhledávání pomocí SQL}
+\section{Vyhledávání v textu pomocí SQL}
 \label{SQLsection}
 Relační databáze poskytují vysoce výkonný přístup k~datům a široké možnosti pro jejich správu. Díky svých schopnostem se staly nejpoužívanější technologií pro datové uložiště. Pro komunikaci s~nimi se využívá jazyk SQL, který nabízí pro vyhledávání v~datech pouze dva způsoby: porovnání obsahu buňky a operátor \texttt{LIKE} \cite{MistrovstviMySQL}.
 
@@ -406,6 +406,7 @@ public class Person {
 Integrace s~Hibernate Core za nás elegantně řeší jeden podstatný problém, který máme s~použitím čistě Apache Lucene - synchronizaci fulltextového indexu a obsahu databáze. Jsou to v~zásadě dvě zcela oddělená datová úložiště, která spolu úzce souvisí. Pokud používáme přímo Apache Lucene, je nutné se po manipulaci s~objektem v~databázi explicitně postarat o~úpravu příslušného indexu, což je pro programátora práce navíc. Oproti tomu Hibernate Search je navázán na události Hibernate Core, tudíž při úpravě objektu v~databázi je automaticky spuštěn proces aktualizace indexu, aby spolu byla data v~databázi a fulltextovém indexu synchronizována  \cite[s.~24]{HibernateSearchAction}. 
 
 \section{Elasticsearch}
+\label{ElasticsearchChapter}
 Elasticsearch je distribuovaný vyhledávácí a analytický nástroj v~reálném čase \cite{ElasticsearchDefinitiveGuide}. Historie této technologie se začala psát v~roce 2004, kdy Shay Banon vytvořil \emph{Compass}. Postupným vývojem a změnou požadavků však dospěl k~názoru, že aby se mohl Compass stát distribuovanou technologií, bylo by zapotřebí ho značnou část přepsat. Rozhodl se proto naprogramovat zcela nový nástroj, který měl být již od počátku distribuovaný. První verze Elasticsearch byla vydána v~únoru 2010 \cite{ElasticsearchWiki}.
 
 Elasticsearch je rovněž postaven na dříve představené technologii Apache Lucene, k~níž však přidává další klíčové vlastnosti. Řeč je zejména o~celé architektuře. Elasticsearch není na rozdíl od Apache Lucene knihovnou, Elasticsearch tvoří samostatný distribuovaný systém serverů, které na pozadí používají Apache Lucene, ovšem skrývají její složitost a poskytují služby v~mnohem jednodušším uživatelském API. Velký důraz je kladen právě na distribuovanost celého systému, proto je Elasticsearch vysoce škálovatelný, schopný vytvořit klastr několika stovek serverů, a tím zajistit vysoký výkon i při několika petabajtech dat, což patří mezi hlavní přidanou hodnotu navrch k~Apache Lucene \cite{ElasticsearchDefinitiveGuide}.
@@ -413,41 +414,121 @@ Elasticsearch je rovněž postaven na dříve představené technologii Apache L
 Základním způsobem komunikace se serverem Elasticsearch je REST (\emph{Representational State Transfer}) API posílající JSON (\emph{JavaScript Object Notation}) objekty. Tím získáváme naprostou nezávislost na programovacím jazyku, komunikace může probíhat přímo i z~příkazové řádky. Do některých jazyků, jako například Java, PHP, Python, však byli napsáni klienti, kteří umožňují komunikaci přímo z~onoho jazyka. Stejně jako Hibernate Search je tedy i Elasticsearch zaobalená knihovna Apache Lucene s~několika přidanými hodnotami \cite{ElasticsearchDefinitiveGuide}. 
 
 \chapter{Návrh a implementace}
-Předchozí kapitoly představily fulltextové vyhledávání a dostupné technologie pro jeho implementaci na platformě Java. 
-
-Nyní se věnujeme skutečné implementaci fulltextového vyhledávání v~systému správy požadavků eShoe. Celou implementaci lze rozdělit na několik částí: výběr technologie, indexace, vyhledávání a import dat.
+Předchozí kapitoly představily fulltextové vyhledávání a dostupné technologie pro jeho implementaci na platformě Java. Následující text se věnuje skutečné implementaci fulltextového vyhledávání v~systému správy požadavků eShoe. 
 
 \section{Specifikace požadavků}
-Specifikace
+\label{SpecifikacePozadavku}
+Hlavním úkolem je vytvořit funkční fulltextové vyhledávání v systému eShoe. Tento požadavek lze rodělit do několika menších částí shrnutých v následujících bodech:
+\begin{itemize}
+	\item \textbf{Provedení indexace:} \\ 
+		 Při modifikaci entity v databázi musí být entita rovněž vhodně uložena do indexu pro fulltextové vyhledávání, aby mohla být následně vyhledávána.
+
+	\item \textbf{Vyhledávání nad indexovanými daty:} \\
+		Na základě dotazu uživatele musí být index prohledán a vráceny relevantní výsledky.
+
+	\item \textbf{Zobrazení výsledků:} \\
+		Vytvořit jednoduché uživatelské rozhraní, které umožní pokládat dotazy a zároveň zobrazí výsledky.		
+\end{itemize}
+
+Protože musíme vybrat vhodné vlastnosti entit, které mají být indexovány, je nutné specifikovat dotazy, které by uživatel mohl chtít položit a systém by na ně měl umět vrátit požadovanou odpověď. Kromě obecného zadání fráze, na jejímž základě mají být vráceny relevantní požadavky, je žadoucí umožnit uživateli zadat vlastnosti, které musí požadavek splňovat a všechny nevyhovující odfiltrovat, například vyhledat všechny požadavky na dotaz \uv{NullPointerException}, ale pouze ty přiřazené k projektu \uv{Infinispan}. Následuje výčet vlastností, které může uživatel explicitně zadat, a podle kterých systém umožní požadavky filtrovat:
+\begin{itemize}
+	\item projekt, ke kterému je požadavek přiřazen
+	\item status, v němž se požadavek nachází
+	\item typ požadavku
+	\item datum vytvoření
+	\item datum poslední modifikace
+	\item jméno uživatele, který požadavek vytvořil
+	\item jméno uživatele, kterému přiřazeno řešení požadavku
+	\item prioritu požadavku	 
+\end{itemize}
+
+Dalším bodem ze zadání je vytvořit mechanismus pro import dat z již existujícího systému správy požadavků do systému eShoe. Systém musí být schopen na základě předaného seznamu požadavků z onoho existujícícho systému namapovat požadavky na datový model systému eShoe, uložit je do databáze a fulltextového indexu.
 
 \section{Návrh}
-Návrh
+V předchozí sekci je uvedena specifikace, kterou musí implementace splňovat. Následující text popisuje fázi návrhu, jak budou jednotlivé body specifikace vyřešeny. 
+
+Pro implementaci fulltextového vyhledávání byla zvolena technologie Elasticsearch z následujících důvodů. Jedná se o relativně mladou technologii, která je však postavena na osvědčené Apache Lucene, s aktivní komunitní základnou a stálým vývojem. Je používána např. serverem GitHub \cite{ElasticsearchDefinitiveGuide}, z čehož lze usuzovat, že poskytne i dostatečný výkon. Kromě toho nám Elasticsearch přišel subjektivně nejvíce elegantní.
+
+\subparagraph{Indexace}
+První z~problémů, který je potřeba vyřešit, je zvládnutí procesu indexace, tedy denormalizaci entit do formátu, který se dá přímo předat Elasticsearch serveru. Elasticsearch příjímá JSON objekty (viz. \ref{ElasticsearchChapter}, musíme tedy entity převést právě do JSON formátu. Jedním z~prvních možných řešení je prostá manuální tvorba indexu z~entity pomocí \emph{get} metod, to znamená pro každou třídu vytvořit mechanismus, který v~předem daném pořadí předem dané atributy získá a vytvoří z~nich JSON objekt.
+
+Nevýhoda tohoto řešení je zjevná -- nulová flexibilita. Při každé úpravě entity je nutné dopsat odpovídající mechanismus, který upravený atribut denormalizuje. Navíc je toto řešení udělané přesně na míru tomuto projektu, resp. přesně danému datovému modelu, tudíž není znovupoužitelné do budoucna. Výhoda je ovšem rovněž zřejmá -- jednoduchost. K naprogramování takového mechanismu není potřeba víc než základní znalost jazyka Java. Z důvodu programování kódu, který by byl použitelný pouze v jednom projektu a je poměrně neelegantní bylo toto řešení zavrhnuto a hledali jsme alternativní přístup.
+
+Po prostudování dokumentace pro Elasticsearch jsme zjistili, že v součané době není pro jazyk Java naprogramován žádný nástroj, jenž by usnadnil denormalizaci objektů, jako je tomu např. v Hibernate Search (viz. \ref{ExampleHibernateSearch}). Bylo proto rozhodnuto, že podobný mechanismus naprogramujeme první a poskytneme podobnou funkcionalitu i pro Elasticsearch.
+
+Základní myšlenkou je použití anotací, což je zárukou vysoké elegance a jednoduchosti použití. Jakmile jsou atributy entity označeny anotacemi, entity se předá správci indexu, který entitu denormalizuje, připojí se skrze zvoleného klienta k serveru Elasticsearch a uloží nově vytvořený dokument do indexu opět na základě zadaných parametrů u anotací. Tento nově vzniklý projekt byl pojmenován \emph{Elasticsearch-Annotations}.
+
+Protože při vývoji projektu eShoe nebyla potřeba servisní vrstva aplikace, tak zcela chybí. Nyní je však nutné navázat operace změny indexu na změny v databázi a servisní vrstva by byla místem, kde by se to dalo realizovat. Proto byla servisní vrstva nově vytvořena. Vyřešení indexace pak spočívá v označení entit anotacemi a zavoláním správce indexu na servisní vrstvě. 
+
+Jelikož je proces denormalizace zcela oddělen do projektu Elasticsearch-Annotations a pro zakomponování indexačního mechanismu do datového modelu eShoe vyžaduje minimální úpravy, je toto řešení elegantní a vysoce znovupoužitelné. Bylo proto rozhodnuto se ubírat tímto směrem a tento návrh implementovat.
+
+\subparagraph{Vyhledávání}
+Jakmile máme data zaindexována, můžeme přistoupit k vlastnímu vyhledávání. Jedná se hlavně o způsob tvorby dotazu pro Elasticsearch server. Kapitola \ref{SpecifikacePozadavku} uvádí systémem podporovné typy dotazů, který je několik a patrně v budoucnu přibydou další. Typů dotazů je několik a poměrně různorodých, proto je potřeba vymyslet robustní způsob zadávání dotazů, který by se mohl dále rozšiřovat.
+
+Základním způsobem je tvorba dotazu přes uživatelské rozhraní, na pozadí by se postupně budoval objekt reprezentující dotaz pro Elasticsearch, a poté se vyhodnotil. Musíme však brát v potaz uživatele, kteří by chtěli vyhledávání používat skrze nějaký automatizovaný mechanismus, nikoliv ručně klikáním na komponenty v GUI. Pro ty by automatizace tvorby dotazu nebyla jednoduchá.
+
+Další možností je vytvořit vlastní dotazovací jazyk, jako má např. Attlasian JIRA. Uživatel by dostal možnost vytvářet dotazy buď klikáním v GUI, nebo by rovnou mohl napsat dotaz v dotazovacím jazyce. Proces automatizace se tím pádem velice zjednodušuje na předání vytvořeného dotazu v dotazovacím jazyce do parametru stránky. Pro některé uživatele je dokonce pohodlnější napsat dotaz rovnou v dotazovacím jazyce, pokud je dostatečně jednoduchý. Pro poskytnutí maximálně flexibility se přikláníme k tomuto řešení.
+
+Vyhledávání bude probíhat na základě dotazu vytvořeném ve vlastním dotazovacím jazyce. Uživatelské rozhraní bude sloužit jako tvůrce oněch dotazů umožňující rovněž zadávání dotazu přímo. Dotazovací jazyk bude mít následující vlastnosti:
+\begin{itemize}
+	\item zadat text, který se má použít jako fráze pro fulltextového vyhledávání
+	\item zadat filtr na vlastnost entity na přesnou shodu jedné položky
+	\item určit filtr na vlastnost entity na shodu s některou ze seznamu předaných hodnot
+	\item předchozí body libovolně kombinovat
+\end{itemize}
+
+Uvedený jazyk by měl být co nejjednoduší a mít intuitivní syntaxi. Obrázky \ref{QueryLanguageExample1}, \ref{QueryLanguageExample2} a \ref{QueryLanguageExample3} uvádí příklady, jak bude výsledný dotazovací jazyk vypadat.
+
+\begin{figure}[htbp]
+\begin{lstlisting}[frame=single]
+text ~ "NullPointerException"
+AND project = "Infinispan"
+\end{lstlisting}
+\caption{Vyhledání fráze \uv{NullPointerException} pouze u projektu \uv{Infinispan}}
+\label{QueryLanguageExample1}
+\end{figure}
+
+\begin{figure}[htbp]
+\begin{lstlisting}[frame=single]
+text ~ "NullPointerException" 
+AND status IN ("Unresolved", "Open")
+\end{lstlisting}
+\caption{Vyhledání fráze \uv{NullPointerException} u požadavků se statusem \uv{Unresolved} nebo \uv{Open}}
+\label{QueryLanguageExample2}
+\end{figure}
+
+\begin{figure}[htbp]
+\begin{lstlisting}[frame=single]
+text ~ "NullPointerException" 
+AND project = "Infinispan" 
+AND status IN ("Unresolved", "Open")
+\end{lstlisting}
+\caption{Kombinace dotazů \ref{QueryLanguageExample1} a \ref{QueryLanguageExample2}}
+\label{QueryLanguageExample3}
+\end{figure}
+
+\subparagraph{Uživatelské rozhraní}
+Přestože zadání práce ani specifikace uživatelské rozhraní nevyžaduje, rozhodli jsme se jej přesto zahrnout, aby byla demostrace výsledků snažší a aby byl poskytnut prototyp pro další rozvíjení. Součástí grafického rozhraní budou textová pole a tři pole pro vybrání ze seznamu. Textová pole budou použita pro zadání fráze pro vyhledání a ohraničení časového úseku, kdy byl požadavek vytvořen. Pole s předem daným seznamem prvků budou sloužit ke zvolení typů požadavků, jejich statusů a zvolení projektů, ke kterým mají být požadavky přiřazeny. Je zřejmé, že tato pole musí podporovat výběr více možností najednou.
+
+Dále grafické rozhraní umožní jednoduchý výpis nalezených požadavků a umožní přejít přímo na stránku s detailními informacemi o požadavku.
+
+\subparagraph{Import dat}
+Součástí specifikace je i import dat z již existujícího systému pro správu požadavků. Pro tento účel byl vybrán systém Red Hat Bugzilla. Red Hat Bugzilla nabízí REST API pro komunikaci se systémem. Skrze tento přístupový bod musí být systém schopen získat požadavky, jejichž ID bude předáno v konfiguračním souboru importovacího mechanismu. Následně bude požadavek ze systému Red Hat Bugzilla převeden na odpovídající entity v datovém modelu eShoe a uložen do databáze, respektive fulltextového indexu.
 
 \section{Použité technologie}
-\subsection{JBoss AS}
+Při implementaci bylo použito několik dalších technologií (kromě Elasticsearch), některým z nich se věnuje následující text. Při výběru byl kladen důraz nejen na jejich přínosnou hodnotu, ale také na jejich volnou šiřitelnost, neboť celý projekt eShoe se snaží být rovněž volně širitelný.
+
 \subsection{Maven}
+Pro usnadnění procesu vývoje se často používají různé nástroje pro automazaci sestavení a překladu zdrojového kódu. Apache Maven je jedním z předních nástrojů pro správu projektů na platformě Java.
+
 \subsection{Git}
+Git je volně širitelný systém pro distribuovanou správu verzí. 
 \subsection{Jackson}
 \subsection{ANTLR}
 
 \section{Implementace}
 
 \subsection{Indexace}
-První z~problémů, který je potřeba vyřešit, je zvládnutí procesu indexace, tedy denormalizaci entit do formátu, jež se dá přímo předat Elasticsearch serveru. Jak již víme, Elasticsearch příjímá JSON-like objekty,
-tedy dvojce klíč - hodnota.
-Jedním z~prvních možných řešení indexace je prostá manuální tvorba indexu z~entity pomocí get metod, tedy pro každou třídu je vytvořen mechanismus, který v~předem daném pořadí předem dané atributy získá a vytvoří z~nich index.
-
-Nevýhoda tohoto řešení je zjevná - nulová flexibilita. Při každé úpravě entity je nutné dopsat odpovídající mechanismus, který upravený atribut denormalizuje. Navíc je toto řešení udělané přesně na míru tomuto projektu, resp. přesně danému modelu entit,
-tudíž není znovupoužitelné do budoucna. Výhoda je ovšem rovněž zřejmá - jednoduchost. K naprogramování takového mechanismu není potřeba víc než základní znalost jazyka Java.
-
-Rozhodli jsme se však ubírat jinou, sofistikovanější, cestou. Denormalizace je řešena pomocí anotací velice podobně jako v~Hibernate Search. Myšlenkou bylo vytvořit samostatný projekt, který máambice se později začlenit přímo do projektu
-Elasticsearch. To však vyžaduje vytvořit robustní a široce použitelný nástroj, nikoliv na míru vytvořený pouze pro potřeby projektu eShoe. 
-
-Základem je použití anotací, což zaručuje vysokou eleganci a jednoduchost použití. Inspirace vzešla právě z~Hibernate Search, tedy oanotovat datový model (entity) nově vytvořenými anotacemi tak, aby po předání takové entity našemu indexačnímu manažeru
-nástroj sám vytvořit příslušný JSON dokument, který by následně automaticky odeslal do Elasticsearch serveru. Tím se z~pohledu klienta redukuje proces tvorby indexu na pouhé vybrání vlastností entit, podle kterých se následně bude vyhledávat a
-zavolání jediné metody, o~vše ostatní se již nástroj postará sám.
-
-Přesně podle této myšlenky byl založet nový projekt elasticsearch-annotations. Elasticsearch-annotations poskytuje velice malé veřejné API, což usnadňuje jeho použití. Jádrem projektu je třída IndexManager.
 
 \subsection{Vyhledávání}
 
@@ -501,6 +582,9 @@ Lucene FAQ. \textit{Lucene-java Wiki} [online]. 2004 [cit. 2014-05-04]. Dostupn�
 
 \bibitem{ElasticsearchWiki}
 Elasticsearch. In: \textit{Wikipedia: the free encyclopedia} [online]. San Francisco (CA): Wikimedia Foundation, 2001- [cit. 2014-05-04]. Dostupné z: \url{http://en.wikipedia.org/wiki/Elasticsearch}
+
+\bibitem{ProGit}
+CHACON, Scott. \textit{Pro Git}. New York: Apress, c2009, xxi, 265~s. ISBN 978-1-4302-1833-3. 
 
 \end{thebibliography}
 
