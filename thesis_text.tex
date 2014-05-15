@@ -865,6 +865,74 @@ Skrze uživatelské rozhraní je možné zadat pouze frázi pro fulltextové vyh
 \end{figure}
 
 \section{Import dat}
+Poslední věcí, kterou je třeba implementovat, je import testovacích dat ze systému \emph{Red Hat Bugzilla} (viz. kapitola \ref{SpecifikacePozadavku}). K realizaci importovacího mechanismu (dále jen importeru) je potřeba získat relevantní data ze systému skrze REST rozhraní, které Red Hat Bugzilla nabízí. Následně získaná data převést na strukturu datového modelu eShoe. Všechen kód týkající se importování se nachází v balíku \texttt{com.issuetracker.importer} a třídě \texttt{com.issutracker.service.ImporterServiceBean}. Započít import dat může uživatel z hlavního menu aplikace kliknutím na položku \uv{Import issues}. 
+
+\begin{figure}[htb]
+	\begin{center}
+		\includegraphics[width=340pt]{importer_class_diagram}
+	\end{center}
+	\caption{Diagram tříd importeru}	
+	\label{ImporterClassDiagram}
+\end{figure}
+
+Řídícím prvkem je třída \texttt{ImporterServiceBean}. Pomocí třídy \texttt{IdFileLoader} načte seznam požadavků, které chce uživatel do systému importovat. Tento seznam je uložen v souboru \texttt{resources/importer-bugzilla-ids.txt}. Jedná se o textový soubor, který obsahuje ID požadavků oddělená novým řádkem. Uživatel si tak může přesně zvolit, které požadavky do systému importovat. 
+
+Následně jsou požadavky se zvolenými ID načteny přes REST API vzdáleného systému včetně jejich komentářů. Za zaslání HTTP požadavku a získání odpovědi je odpovědná třída \texttt{RestReader}. Red Hat Bugzilla nabízí několik přístupových bodů pro REST API \cite{Bugzilla}, z nichž jsme vybrali ten, který vrací data ve formátu JSON.
+
+Po získání JSON odpovědi je nutné data namapovat na entity eShoe. Pro přehlednější práci jsme se rozhodli převést JSON do pomocných objektů, se kterými budeme následně pracovat. K tomu je využita třída \texttt{JsonParser}. Třída interně využívá knihovnu \emph{Jackson}\footnote{\texttt{https://github.com/FasterXML/jackson}} pro namapování JSON dokumentů na Java objekty. Jako pomocné třídy, na které se mapuje JSON odpověď, jsou vytvořeny \texttt{BugzillaBug}, \texttt{BugzillaBugResponse}, \texttt{BugzillaComment} a \texttt{BugzillaCommentReponse} tak, aby přesně odpovídaly struktuře vráceného JSON dokumentu, a tím mohly být úspěšně vytvořeny.
+
+Jakmile jsou pomocné objekty vytvořeny, třída \texttt{ImportServiceBean} vytvoří entity z datového modelu eShoe a pomocí \emph{set} metod je naplní odpovídajícími daty. Následně je předá servisní vrstvě, která je uloží do databáze i fulltextového indexu. 
+Zde je seznam všech entit a jejich vlastností, které se do systému importují:
+\begin{itemize}
+	\item \texttt{Issue}
+		\begin{itemize}
+			\item jméno
+			\item priorita
+			\item vazba na uživatele, který požadavek vytvořil
+			\item vazba na uživatele, kterému je požadavek přiřazen
+			\item vazba na typ požadavku
+			\item vazba na projekt
+			\item vazba na komponentu projektu
+			\item vazba na verzi projektu
+			\item vazba na status
+			\item vazba na komentáře k požadavku
+			\item datum vytvoření požadavku
+			\item datum poslední modifikace požadavku
+		\end{itemize}
+	\item \texttt{Project}
+		\begin{itemize}
+			\item jméno
+			\item vazba na verze projektu
+			\item vazba na komponenty projektu			
+		\end{itemize}
+	\item \texttt{ProjectVersion}
+		\begin{itemize}
+			\item jméno				
+		\end{itemize}
+	\item \texttt{Component}
+		\begin{itemize}
+			\item jméno
+		\end{itemize}
+	\item \texttt{IssueType}
+		\begin{itemize}
+			\item jméno
+		\end{itemize}
+	\item \texttt{Status}
+		\begin{itemize}
+			\item jméno
+		\end{itemize}
+	\item \texttt{User}
+		\begin{itemize}
+			\item jméno
+			\item příjmení
+		\end{itemize}
+	\item \texttt{Comment}
+		\begin{itemize}
+			\item obsah komentáře
+		\end{itemize}
+\end{itemize}
+
+\section{Testy}
 
 \chapter{Závěr}
 Závěr
@@ -921,6 +989,9 @@ GOTTVALDOVÁ, Monika. \textit{Modern open source Java EE-based process and issue
 
 \bibitem{ANTLR}
 \textit{About The ANTLR Parser Generator} [online]. 2014 [cit. 2014-05-15]. Dostupné z: \url{http://www.antlr.org/about.html}
+
+\bibitem{Bugzilla}
+Bugzilla::WebService::Server::REST. \textit{Bugzilla 4.5.4+ API Documentation} [online]. 2013 [cit. 2014-05-15]. Dostupné z: \url{http://www.bugzilla.org/docs/tip/en/html/api/Bugzilla/WebService/Server/REST.html}
 
 
 \end{thebibliography}
