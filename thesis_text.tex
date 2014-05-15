@@ -30,6 +30,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{listings} 
+%%\usepackage{pxfonts}
 
 
 %% Additional packages for colors, advanced
@@ -751,6 +752,7 @@ Poslední fází je integrační test spolupráce třídy \texttt{AnnotationInde
 Kapitola \ref{Analyza} představila specifikaci požadavků na vyhledávání v~systému eShoe a navrhla způsob, jakým budou řešeny. Následující text popisuje skutečnou implementaci uvedeného návrhu.
 
 \section{Indexace}
+\label{ImplementaceIndexace}
 K realizaci indexace je použit projekt Elasticsearch-Annotations podrobně představený v~kapitole \ref{ElasticsearchAnnotationsChapter}. Pro zajištění zavedení relevantních dat do indexu Elasticsearch je zapotřebí dvou věcí: vybrat atributy entit, které budou indexovány a označit je vhodnými anotacemi a navázat události vytváření a úpravy indexu na změny entit v~databázi.
 
 V kapitole \ref{SpecifikacePozadavku} jsou uvedeny dotazy, které systém musí podporovat. Podle nich jsme vybrali atributy entit tak, aby všechny dotazy bylo možné provést. Obrázek \ref{DatovyModelEshoe} ukazuje relevantní část datového modelu eShoe, ze kterého jsou atributy vybrány.
@@ -765,7 +767,7 @@ V kapitole \ref{SpecifikacePozadavku} jsou uvedeny dotazy, které systém musí 
 
 Pro splnění všech typů vyhledávacích dotazů byly k~indexaci vybrány následující atributy:
 \begin{itemize}
-	\item \texttt{Issue.id}, \texttt{Issue.name}, \texttt{Issue.summary}, \texttt{Issue.description}, \texttt{Issue.priority}, \texttt{Issue.created} a \texttt{Issue.updated}
+	\item \texttt{Issue.id}, \texttt{Issue.name}, \texttt{Issue.summary}, \texttt{Issue.description}, \\ \texttt{Issue.priority}, \texttt{Issue.created} a \texttt{Issue.updated}
 	\item \texttt{IssueType.name}
 	\item \texttt{Status.name}
 	\item \texttt{User.username}
@@ -792,6 +794,23 @@ public AnnotationIndexManager getIndexManager() {
 \end{figure}
 
 \section{Vyhledávání}
+V předchozí kapitole je popsána implementace indexace entit. Následující text předpokládá, že data jsou úspěšně indexována serverem Elasticsearch a řeší, jakým způsobem jsou dotazována. Jak je uvedeno ve specifikaci (viz. kapitola \ref{SpecifikacePozadavku}, má být dotazování realizováno tvorbou dotazů ve vlastním dotazovacím jazyce.
+
+Byl vytvořen vlastní dotazovací jazyk pro účely eShoe. Obrázek \ref{DotazovaciJazykGramatika} ukazuje jeho gramatiku.
+\begin{figure}[htb]
+\begin{lstlisting}[frame=single]
+dotaz -> konjunkce
+konjunkce -> vyraz | vyraz AND konjunkce
+vyraz -> rovnost | mnozina | fulltext
+rovnost -> <jmeno_atributu> = "<hodnota_atributu>"
+mnozina -> <jmeno_atributu> = 
+	(<hodnoty_v_uvozovkach_oddeleny_carkami>)
+fulltext -> text = "<fulltextova_fraze>"
+\end{lstlisting}
+\caption{Gramatika dotazovacího jazyka eShoe}
+\label{DotazovaciJazykGramatika}
+\end{figure}
+
 
 
 \section{Uživatelské rozhraní}
