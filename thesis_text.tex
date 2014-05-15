@@ -794,6 +794,7 @@ public AnnotationIndexManager getIndexManager() {
 \end{figure}
 
 \section{Vyhledávání}
+\label{ImplementaceVyhledavani}
 V předchozí kapitole je popsána implementace indexace entit. Následující text předpokládá, že data jsou úspěšně indexována serverem Elasticsearch a řeší, jakým způsobem jsou dotazována. Jak je uvedeno ve specifikaci (viz. kapitola \ref{SpecifikacePozadavku}), má být dotazování realizováno tvorbou dotazů ve vlastním dotazovacím jazyce.
 
 Byl vytvořen vlastní dotazovací jazyk pro účely eShoe. Obrázek \ref{DotazovaciJazykGramatika} ukazuje jeho gramatiku.
@@ -811,9 +812,57 @@ fulltext -> text = "<fulltextova_fraze>"
 \label{DotazovaciJazykGramatika}
 \end{figure}
 
+Podotkněme, že operátor \textasciitilde  (vlnka) je použitelný pouze s atributem \uv{text} a dohromady označují frázi pro fulltextové vyhledávání.
 
+Ke kontrole správnosti syntaxe a následnému parsování dotazu je použita knihovna \emph{ANTLR}\footnote{\texttt{http://www.antlr.org/}}. ANTLR (\emph{ANother Tool for Language Recognition}) je generátor parseru pro čtení, zpracování, spouštění či překládání strukturovaného textu nebo binárních souborů. Je široce používaný pro vytváření jazyků, nástrojů a rámců. ANTLR z gramatiky vygeneruje parser, který lze následně použít pro prochází stromem vybudovaným ze zpracovaného textu. \cite{ANTLR}
+
+Ukázky výsledného dotazovacího jazyka jsou uvedeny v kapitole \ref{SpecifikacePozadavku} společně se specifikací požadavků.
+
+\begin{figure}[htb]
+\begin{lstlisting}[frame=single]
+query: andExpression;
+andExpression: expression (AND! expression)*;
+expression: equals | in | tilda;
+equals: FIELD_NAME '='^ fieldValue;
+in: FIELD_NAME IN^
+    '('! fieldValue (','! fieldValue)*')'!;
+tilda: FIELD_NAME '~'^ fieldValue;
+fieldValue: FIELD_VALUE;
+\end{lstlisting}
+\caption{Gramatika dotazovacího jazyka z obrázku \ref{DotazovaciJazykGramatika} zapsána pomocí ANTLR}
+\label{DotazovaciJazykGramatikaAntlr}
+\end{figure}
+
+S využitím ANTLR je ve třídě \texttt{SearchServiceBean} z textového dotazu vytvořen odpovídající dotaz pro klienta Elasticsearch (objekt \texttt{SearchResponse}), který je předán třídě \texttt{SearchManager} z projektu Elasticsearch-Annotations. Manažer pak vrací seznam nalezených požadavků.
+
+Zbývá vyjmenovat, jaká jména atributů lze v dotaze použít a uvést jejich korespondující smysl.
+
+\begin{itemize}
+	\item \texttt{id} -- ID požadavku
+	\item \texttt{project} -- jméno projektu
+	\item \texttt{status} -- status požadavku
+	\item \texttt{issue\_type} -- typ požadavku
+	\item \texttt{created} -- datum vytvoření požadavku
+	\item \texttt{updated} -- datum poslední modifikace požadavku
+	\item \texttt{owner} -- uživatelské jméno uživatele, kterému je požadavek přiřazen
+	\item \texttt{creator} -- uživatelské jméno uživatele, který požadavek vytvořil
+	\item \texttt{priority} -- priorita požadavku
+\end{itemize}
+
+Pomocí námi vytvořeného dotazovacího jazyka lze realizovat všechny dotazy uvedené ve specifikaci. Rovněž lze dotazovací jazyk v budoucnu snadno rozšířit o další atributy, na kterých půjde vyhledávat.
 
 \section{Uživatelské rozhraní}
+Součástí implementace je velice jednoduché grafické uživatelské rozhraní, jak je uvedeno ve specifikaci (viz. \ref{SpecifikacePozadavku}). Stejně jako GUI zbytku systému je uživatelské rozhraní pro vyhledávání napsáno s pomocí technologie \emph{Apache Wicket}. GUI slouží v podstatě jen jako tvůrce vyhledávacích dotazů v dotazovacím jazyce popsaném v kapitole \ref{ImplementaceVyhledavani}. Rovněž umožňuje dotaz přímo zadat, neboť z důvodu jednoduchosti není možné \uv{naklikat} dotaz z GUI se všemi možnými omezeními. 
+
+Skrze uživatelské rozhraní je možné zadat pouze frázi pro fulltextové vyhledávání, filtrovat podle jména projektu, statusu, typu požadavku a data vytvoření. Pro pohodlné zadávání data je využita komponenta Apache Wicket \texttt{DateTextField}, která zobrazí minuaturní kalendář, ve kterém se dá datum zvolit bez nutnosti psát jej na klávesnici. Obrázek \ref{GuiExample} ilustruje tento prototyp grafického rozhraní pro fulltextové vyhledávání v systému eShoe.
+
+\begin{figure}[htb]
+	\begin{center}
+		\includegraphics[width=340pt]{gui_example}
+	\end{center}
+	\caption{Prototyp grafického rozhraní pro fulltextové vyhledávání}	
+	\label{GuiExample}
+\end{figure}
 
 \section{Import dat}
 
@@ -869,6 +918,9 @@ CHACON, Scott. \textit{Pro Git}. New York: Apress, c2009, xxi, 265~s. ISBN 978-1
 
 \bibitem{eShoeDiplomka}
 GOTTVALDOVÁ, Monika. \textit{Modern open source Java EE-based process and issue tracker}. Brno, 2014. Diplomová práce. FI MU.
+
+\bibitem{ANTLR}
+\textit{About The ANTLR Parser Generator} [online]. 2014 [cit. 2014-05-15]. Dostupné z: \url{http://www.antlr.org/about.html}
 
 
 \end{thebibliography}
