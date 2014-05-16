@@ -43,6 +43,7 @@
 \usepackage[small,bf]{caption}
 \usepackage[plainpages=false,pdfpagelabels,unicode]{hyperref}
 \usepackage[all]{hypcap}
+\usepackage[toc,page]{appendix}
 
 %% Fix long URLs in DVIs
 \usepackage{ifpdf}
@@ -63,6 +64,9 @@
 %% itemized lists
 \renewcommand{\labelitemii}{$\star$}
 \renewcommand{\labelitemiii}{$\circ$}
+
+\renewcommand{\lstlistingname}{Ukázka}
+\lstset{frame=single, captionpos=b, breaklines=true, literate={\\\-}{}{0\discretionary{-}{}{}}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %------- Nastavení bakalářské práce (název, autor, atd.)  -----------
@@ -93,17 +97,21 @@
 
 %% Thanks (optional)
 \begin{ThesisThanks}
-TODO: poděkování
+Chtěl bych poděkovat Mgr. Filipovi Nguyenovi za odborné vedení práce a za cenné rady při psaní tohoto textu. 
+
+Rád bych poděkoval Lukáši Vlčkovi za ochotné zodpovězení jakýchkoli dotazů týkajících se technologie Elasticsearch a fulltextového vyhledávání obecně. Dále Ondrovi Žižkovi za sestavení velice zajímavého zadání bakalářské práce a poskytnutí nápadů při programování.
+
+V neposlední řadě nesmím zapomenout poděkovat celému týmu \emph{JBoss Data Grid} ve společnosti \emph{Red Hat}, který mi vždy ochotně poradil a toleroval mou občasnou nepřítomnost v práci z důvodu psaní této práce.
 \end{ThesisThanks}
 
 %% Abstract (required)
 \begin{ThesisAbstract}
-TODO: abstrakt
+Cílem této práce je implementace fulltextového vyhledávání v systému pro správu požadavků eShoe za využití technologie Elasticsearch. První část popisuje teorii fulltextového vyhledávání a dostupné technologie pro jeho implementaci na platformě Java. Druhá část se věnuje na návrh a implementaci vyhledávání a importu testovacích dat do systému.
 \end{ThesisAbstract}
 
 %% Keywords (required)
 \begin{ThesisKeyWords}
-TODO: klíčová slova
+fulltextové vyhledávání, Elasticsearch, Apache Lucene, systém pro správu chyb, issue tracker, Elasticsearch-Annotations
 \end{ThesisKeyWords}
 
 %% Beginning of the thesis itself
@@ -124,42 +132,64 @@ TODO: klíčová slova
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \chapter{Úvod}
-Úvod
+Vývoj počítačového software je složitý proces. Při vývoji vzniká mnoho požadavků, které je potřeba evidovat, např. vzniklé chyby, žádosti o novou funkčnost apod. Pro usnadnění evidence těchto požadavků vznikly systémy označované jako systémy pro správu požadavku (\emph{issue tracker}). Tyto systémy si kladou za cíl pomoci zajistit kvalitu produktu při vývoji, a to tak, že budou sdružovat veškeré informace o požadavcích na jednom místě a poskytne prostředky pro jejich správu.  Jedním z nich je systém eShoe.
+
+\emph{eShoe} (název odvozen od výslovnosti anglického slova \uv{issue}) je pracovní název pro nově vznikající volně širitelný systém pro správu požadavků na platformě Java. Jeho kostra je výstupem diplomové práce Moniky Gottvaldové \cite{eShoeDiplomka} a je hostován na serveru GitHub\footnote{\texttt{https://github.com/MonikaGottvaldova/eShoe}}. V současné době je eShoe ve fázi prototypu, jenž se neustále vyvíjí. 
+
+Čím je projekt větší, tím více při jeho vývoji požadavků vzniká a nastává problém, jak se ve velkém množství požadavků efektivně orientovat. Toho je většinou docíleno vyhledáváním, které umožní na základě zadané fráze najít relevantní výsledky. 
+
+\section{Cíle práce}
+Cílem této práce je rozšířit existující implementaci systému pro správu požadavků eShoe o možnost fulltextového vyhledávání, které bude splňovat základní požadavky na použitelnost a umožní efektivní vyhledávání v požadavcích. 
+
+Hlavní cíl lze rozdělit na několik menších částí. První část spočívá v seznámení se s volně širitelnými technologiemi pro implementaci fulltextového vyhledávání na platformě Java. Je nutné pochopit, jak fulltextové vyhledávání funguje, jaké možnosti nabízí a jak lze jeho vlastností využít k co nejpoužitelnějšímu vyhledávání v systému.
+
+Druhá část cíle obsahuje návrh a implementaci fulltextového vyhledávání v systému eShoe. Je zapotřebí vyřešit proces indexace, tedy zpřístupnění uživatelských dat pro potřeby fulltextového vyhledávání, což zahrnuje specifikace dotazů, na které bude systém schopen odpovědět. Poté je nutné vytvořit prostředek pro pokládání dotazů uživatelem, aby mohl fulltextové vyhledávání v systému používat.
+
+Posledním z cílů je vytvořit mechanismus pro importování reálných testovacích dat z existujícího systému pro správu požadavků Red Hat Bugzilla. Na těchto datech pak otestovat funkčnost fulltextového vyhledávání v systému eShoe.
+
+\section{Struktura práce}
+Tato sekce stručně popisuje kapitoly, které se zabývají jednotlivými cíly této práce.
+
+Kapitola \textit{\nameref{VyhledavaniChapter}} poskytuje úvod do vyhledávání pomocí SQL a uvádí problémy, které takto řešené vyhledávání může mít. Dále nabízí alternativní řešení v podobě fulltextového vyhledávání. Zaměřuje se na popis vlastností fulltextového vyhledávání a jeho základních principů.
+
+Kapitola \textit{\nameref{DostupneTechnologieChapter}} se věnuje třem dostupných technologiím pro implementaci fulltextového vyhledávání na platformě Java: \emph{Apache Lucene}, \emph{Hibernate Search} a \emph{Elasticsearch}. Velký důraz klade na popis Apache Lucene, neboť ostatní zmíněné technologie na ní staví. Podrobněji rozebírá možnosti analýzy textu pomocí Apache Lucene a denormalizaci entit v Hibernate Search.
+
+Kapitola \textit{\nameref{Analyza}} je první kapitolou věnující se samotné realizaci vyhledávání v eShoe. Na základě zadání práce extrahuje požadavky na vyhledávání a import dat a vytváří z nich specifikaci. Na základě specifikace diskutuje nad možnými řešeními jednotlivých bodů a navrhuje jedno z nich, které bude vybráno k implementaci.
+
+V rámci návrhu je rozhodnuto o naprogramování dedikovaného nástroje pro zvládnutí indexace nazvaného \emph{Elasticsearch-Annotation}, který je podrobně popsán v kapitole \textit{\nameref{ElasticsearchAnnotationsChapter}}. Jsou popsány všechny jeho aspekty, od architektury, přes popis vlastností, které nabízí, až po ukázku, jak jej použít.
+
+Předposlední kapitola \textit{\nameref{ImplementaceChapter}} pojednává o implementaci návrhu fulltextového vyhledávání v eShoe. Rozebírá, jak je indexace spjatá se změnami v databázi a které informace jsou pro vyhledávání zpřístupněny. Dále se zabývá vyhledáváním v systému s využitím dotazovacího jazyka speciálně vytvořeného pro projekt eShoe. Rovněž představuje prototyp uživatelského rozhraní a popisuje, jak je fulltextové vyhledávání otestováno.
+
+V kapitole \textit{\nameref{ZaverChapter}} jsou shrnuty výsledky této práce a navržena další vylepšení jak fulltextového vyhledávání v systému eShoe, tak projektu Elasticsearch-Annotations.
 
 \chapter{Vyhledávání}
-Tato kapitola stručně popisuje způsob vyhledávání skrze SQL v~nejčastějším datovém úložišti -- relačních databázích -- a uvádí jeho nedostatky. Poté se detailněji věnuje jednou z~možností jejich řešení, a to fulltextovým vyhledáváním. Uvádí nezbytnou 
-teorii k~pochopení principů, jak fulltextové vyhledávání funguje.
+\label{VyhledavaniChapter}
+Tato kapitola stručně popisuje způsob vyhledávání skrze SQL v~relačních databázích a uvádí jeho nedostatky. Poté se detailněji věnuje jedné z~možností jejich řešení, a to fulltextovým vyhledáváním. Uvádí nezbytnou teorii k~pochopení principů, jak fulltextové vyhledávání funguje.
 
 \section{Vyhledávání v~textu pomocí SQL}
 \label{SQLsection}
 Ve většině Java aplikací je vyhledávání implementováno pomocí technologií, které poskytuje datové úložiště. Protože jsou relační databáze obvykle datovým úložištěm, k~implementaci vyhledávání se využívá jazyk SQL \cite{HibernateSearchAction}. SQL nabízí pro vyhledávání v~datech pouze dva způsoby: porovnání obsahu buňky a operátor \texttt{LIKE} \cite{MistrovstviMySQL}.
 
-Porovnání obsahu buňky funguje na velice jednoduchém principu úplné shody obsahu. Obrázek \ref{SQLexample1} ukazeuje dotaz v~jazyce SQL, který vybere právě ty záznamy z~tabulky \texttt{People}, které mají hodnotu atributu \texttt{name} rovnou \uv{Bruce Banner}. 
-\begin{figure}[!htbp]
-\begin{lstlisting}[frame=single]
-SELECT * FROM People WHERE name = 'Bruce Banner'
-\end{lstlisting}
-\caption{Jednoduché použití SQL pro vyhledávání pomocí úplné shody obsahu pole}
-\label{SQLexample1}
-\end{figure}
+Porovnání obsahu buňky funguje na principu úplné shody obsahu. Ukázka \ref{SQLexample1} uvádí příklad dotazu, který vybere záznamy z~tabulky \texttt{Lide}, které mají hodnotu atributu \texttt{jmeno} rovnou \uv{Bruce Banner}. 
 
-Nebudou vybrány žádné jiné záznamy, přestože by obsah atributu \texttt{name} byl např. \uv{Bruce Banners} či dokonce ani \uv{Bruce Banner } (přebytečná mezera na konci). Výhodou tohoto řešení je efektivita a jednoduchost -- jediná nutná operace je 
+\begin{lstlisting}[language=SQL, caption =  Jednoduché použití SQL pro vyhledávání pomocí úplné shody obsahu pole, label = SQLexample1]
+SELECT * FROM Lide WHERE jmeno = 'Bruce Banner'
+\end{lstlisting}
+
+Nebudou vybrány žádné jiné záznamy, přestože by obsah atributu \texttt{jmeno} byl např. \uv{Bruce Banners} či dokonce ani \uv{Bruce Banner } (přebytečná mezera na konci). Výhodou tohoto řešení je efektivita a jednoduchost -- jediná nutná operace je 
 pouze porovnání dvou řetěžců, žádné dodatečné zpracování není potřeba. 
 
-Trochu více sofistikovaným způsobem je operator \texttt{LIKE}, který umožňuje (v omezené míře) používat vyhledávání pomocí vzoru (\emph{pattern matching}). Podporovány jsou tzv. zástupné symboly (\emph{wildcards}), jež mohou mít v~tomto kontextu jiný význam než jen právě daný znak, např. symbol \% (procento) zastupuje libovolnou sekvenci znaků (třeba i žádnou) nebo znak \_ (podtržítko) libovolný, ale právě jeden znak. Obrázek \ref{SQLexample2} ukazuje příklad SQL dotazu, jenž vrátí všechny záznamy z~tabulky \texttt{People}, které jejich jméno končí na \uv{Banner}.
-\begin{figure}[!htbp]
-\begin{lstlisting}[frame=single]
-SELECT * FROM People WHERE name LIKE '%Banner'
+\begin{lstlisting}[language=SQL, caption =  Použití SQL operátoru LIKE, label = SQLexample2]
+SELECT * FROM Lide WHERE jmeno LIKE '%Banner'
 \end{lstlisting}
-\caption{Použití SQL operátoru LIKE}
-\label{SQLexample2}
-\end{figure}
+
+Trochu více sofistikovaným způsobem je operator \texttt{LIKE}, který umožňuje (v omezené míře) používat vyhledávání pomocí vzoru (\emph{pattern matching}). Podporovány jsou tzv. zástupné symboly (\emph{wildcards}), jež mohou mít v~tomto kontextu jiný význam než jen právě daný znak, např. symbol \% (procento) zastupuje libovolnou sekvenci znaků (třeba i žádnou) nebo znak \_ (podtržítko) libovolný, ale právě jeden znak. Ukázka \ref{SQLexample2} uvádí příklad SQL dotazu, jenž vrátí všechny záznamy z~tabulky \texttt{Lide}, jejichž jméno končí na \uv{Banner}.
 
 S použitím operátoru \texttt{LIKE} je možné získat jak lidi se jménem \uv{Bruce Banner}, tak i \uv{Richard Banner}. 
 
 \section{Problémy vyhledávání pomocí SQL}
 \label{ProblemyVyhledavaniSQL}
-Předchozí kapitola představila základní způsoby vyhledávání pomocí SQL. Tato kapitola se věnuje problémům, kterými vyhledávání pomocí SQL trpí a nedokáže si s~danou situací poradit buď vůbec, nebo pouze neefektivně.
+Předchozí kapitola představila základní způsoby vyhledávání pomocí SQL. Tato kapitola se věnuje problémům, na které může vyhledávání pomocí SQL narazit a nedokáže si s~danou situací poradit buď vůbec, nebo pouze neefektivně.
 
 Pro demonstraci problémů na příkladech uvažujme existenci jednoduché relační databáze s~následujícím schématem (obrázek \ref{example_schema}).
 
@@ -174,18 +204,15 @@ Pro demonstraci problémů na příkladech uvažujme existenci jednoduché rela�
 \subparagraph{Vyhledávání přes několik tabulek}
 Uživatel zadal do vyhledávacího políčka nějaký řetězec, na jehož základě očekává odpovídající výsledky. Vyvstává otázka, kde by měl systém zadanou frázi hledat. V~případě uvedené modelové databáze pravděpodobně v~nadpisu, popisu, ve jméně a příjmení autora, všude tam by se mohly nacházet informace, které uživatel hledal. 
 
-SQL nyní musí prohledat všechny zadané sloupce, které se však mohou nacházet v~různých tabulkách, což vede ke spojování tabulek. Možný příklad výsledného dotazu ukazuje obrázek \ref{SQLexample3}.
-\begin{figure}[h!]
-\begin{lstlisting}[frame=single]
+SQL nyní musí prohledat všechny zadané sloupce, které se však mohou nacházet v~různých tabulkách, což vede ke spojování tabulek. Možný příklad výsledného dotazu uvádí ukázka \ref{SQLexample3}.
+
+\begin{lstlisting}[language=SQL, caption =  SQL dotaz vyhledávající přes několik tabulek, label = SQLexample3]
 SELECT *
 FROM Kniha kniha 
 LEFT JOIN kniha.autor autor 
 WHERE kniha.titul = ? OR kniha.popis = ? OR 
 autor.jmeno= ? OR autor.prijmeni= ?
 \end{lstlisting}
-\caption{SQL dotaz vyhledávající přes několik tabulek}
-\label{SQLexample3}
-\end{figure}
 
 Je vidět, že i při relativně jednoduchém požadavku (vyhledávání probíhá pouze ve čtyřech sloupcích) je výsledný dotaz poměrně složitý. Pokud uživatel měl mít možnost využívat komplexnější
 dotazy, je otázka generování odpovídajích SQL dotazů netriviální. Při složitějších dotazech je často nutné spojit více tabulek, což může vést k~problémům s~efektivitou \cite[s.~9]{HibernateSearchAction}.
@@ -218,7 +245,6 @@ další knihy o~fulltextovém vyhledávání, jelikož hledaná kniha \uv{nejví
 \section{Fulltextové vyhledávání}
 Předchozí kapitola demostrovala, jaké problémy má vyhledávání pomocí SQL. Nyní si bude představeno možné řešení -- fulltextové vyhledávání. 
 
-\subsection{Úvod do fulltextového vyhledávání}
 \label{UvodDoFulltextu}
 Fulltextové vyhledávání (někdy také \emph{fulltext} nebo \emph{full-text}) je speciální způsob vyhledávání informací v~textu. Vyhledávání probíhá porovnáváním s~každým slovem v~hledaném textu. Jelikož počet slov v~textu může teoreticky neomezený a jelikož je 
 nutné, aby vyhledávání bylo co nejrychlejší, funguje fulltextové vyhledávání ve dvou fázích: \emph{indexace} a \emph{hledání} \cite[s.~11]{HibernateSearchAction}. 
@@ -234,7 +260,8 @@ Pouhým rozdělením do slov však možnosti předpřipravení textu nekončí a
 Samotné vyhledávání v~textu je ve fulltextovém vyhledávání realizováno nikoliv nad textem samotným, ale nad předpřipraveným indexem z~procesu indexace \cite[s.~15]{HibernateSearchAction}. Vyhledávácí nástroj tedy může využít doplňkových informací o~textu, které dokáží vyhledávání zrychlit. Jakým způsobem je index budován a jak se nad ním následně vyhledává, záleží pak již na konkrétní technologii.
 
 \chapter{Dostupné technologie}
-Pro platformu Java existuje řada dostupných volně širitelných vyhledávacích technologií. Nyní si představíme tři z~nich: \emph{Apache Lucene}, \emph{Hibernate Search} a \emph{Elasticsearch}.
+\label{DostupneTechnologieChapter}
+Pro platformu Java existuje řada dostupných volně širitelných vyhledávacích technologií. Tato kapitola představuje tři z~nich: \emph{Apache Lucene}, \emph{Hibernate Search} a \emph{Elasticsearch}.
 
 \section{Apache Lucene}
 Apache Lucene je vysoce výkonná, škálovatelná, volně širitelná vyhledávací knihovna napsána v~jazyce Java \cite[s.~6]{LuceneAction}. Autorem projektu, který vznikl v~roce 1997, je Doug Cutting. Zajímavostí je, že jméno Lucene bylo vybráno podle druhé jména manželky autora \cite[s.~6]{LuceneAction}. V~roce 2000 zveřejnil Lucene na stránkách serveru SourceForge.com a uvolnil ji tak zdarma pro komunitu. O~rok později byla adoptována organizací \emph{Apache Software Foundation}. Od té doby se knihovna neustále vyvíjela a v~dubnu roku 2014 je aktuálně dostupná ve své nejnovější verzi 4.7.1 \cite[s.~6]{LuceneAction}.
@@ -268,7 +295,7 @@ Třída \texttt{IndexWriter} je vstupní bod indexace. Je zodpovědná za vytvá
 
 Předtím než je text indexován, je předán analyzéru, implementaci abstraktní třídy \texttt{Analyzer}. Analyzér je zodpovědný za extrakci \emph{tokenů} -- jednotek, které následně budou skutečně uloženy do indexu \cite[s.~116]{LuceneAction} -- a eliminaci všeho ostatního. Analyzér je patrně nejdůležitější komponenta indexace, rozhoduje, které tokeny budou uloženy a dokáže je libovolně modifikovat. Apache Lucene obsahuje již některé praktické implementace třídy \texttt{Analyzer}, které jsou nejběžnější. Některé z~nich  se například zabývají odstraněním šumu z~textu, další převedením všech písmen na malá apod. Proces analýzy je podrobněji rozebírán v~další kapitole, neboť je to klíčová vlastnost Apache Lucene, kterou dědí i ostatní technologie na ní postavené.
 
-\texttt{Document} reprezentuje kolekci polí (\emph{fields}), je to kontejner pro objekty \texttt{Field}, které nesou textová data. 
+\texttt{Document} je kolekcí polí (\emph{fields}), tedy kontejnerem pro objekty \texttt{Field}, které nesou textová data. 
 
 \texttt{Field} je základní jednotka, která obsahuje vlastní indexovaný text.
 
@@ -277,16 +304,16 @@ Jak je uvedeno v~kapitole \ref{UvodDoFulltextu}, fulltextové vyhledávání má
 \subsection{Indexace}
 Předchozí kapitola stručně popisuje architekturu indexační části Apache Lucene. Následuje bližší vysvětlení, jak spolu jednotlivé části spolupracují.
 
-Základní jednotkou indexu Apache Lucene jsou \emph{dokumenty} (\emph{directories}) a \emph{pole} (\emph{fields}) \cite[s.~32]{LuceneAction}. Dokument je kolekcí polí, které pak obsahují \uv{skutečný} obsah. Každé pole má své jméno, textovou nebo binární hodnotu a seznam operací, které popisují, co má Apache Lucene dělat s~hodnotou pole při vytváření indexu. Aby mohla být uživatelská data indexována (položky z~databáze, PDF dokumenty, HTML stránky apod.), je potřeba je převést do formátu Apache Lucene dokumentu. Apache Lucene nemá ponětí o~sématice obsahu, který indexuje. Převedením struktury uživatelského obsahu do struktury Lucene dokumentů, do dvojic klíč:hodnota, se zabývá \emph{denormalizace}.
+Základní jednotkou indexu Apache Lucene jsou \emph{dokumenty} a \emph{pole} \cite[s.~32]{LuceneAction}. Dokument je kolekcí polí, která pak obsahují indexovaný text. Každé pole má své jméno, textovou nebo binární hodnotu a seznam operací, které popisují, co má Apache Lucene dělat s~hodnotou pole při vytváření indexu. Aby mohla být uživatelská data indexována (položky z~databáze, PDF dokumenty, HTML stránky apod.), je potřeba je převést do formátu Apache Lucene dokumentu. Při indexaci nástroj Apache Lucene nezohledňuje sémantiku obsahu. Převedením struktury uživatelského obsahu do struktury Lucene dokumentů, do dvojic klíč hodnota, se zabývá \emph{denormalizace}.
 
 \subparagraph{Denormalizace}
 \label{Denormalizace}
-Denormalizace je proces převedení libovolné struktury dat do jednoduchého formátu klíč:hodnota \cite[s.~34]{LuceneAction}. Například v~databázi jsou jednotlivé záznamy spojovány cizími klíči mezi různými tabulkami, vzniká mezi nimi vztah, jednotlivé záznamy se na sebe odkazují. V~dokumentech Apache Lucene však žádná možnost odkazu či spojení není, jediný akceptovaný formát je klíč:hodnota. Programátor musí vyřešit problém, jak data, ve kterých chce vyhledávat, denormalizuje. Apache Lucene nechává tuto část zcela na programátorovi, na rozdíl od na ní postavených technologiích jako např. Hibernate Search.
+Denormalizace je proces převedení libovolné struktury dat do jednoduchého formátu klíč hodnota \cite[s.~34]{LuceneAction}. Například v~databázi jsou jednotlivé záznamy spojovány cizími klíči mezi různými tabulkami, vzniká mezi nimi vztah, jednotlivé záznamy se na sebe odkazují. V~dokumentech Apache Lucene však žádná možnost odkazu či spojení není, jediný akceptovaný formát je klíč:hodnota. Programátor musí vyřešit problém, jak data, ve kterých chce vyhledávat, denormalizuje. Apache Lucene nechává tuto část zcela na programátorovi, na rozdíl od na ní postavených technologiích jako např. Hibernate Search.
 
 Jednou z~dalších důležitých věcí, které je potřeba vědět o~Apache Lucene dokumentech, je absence jakéhokoliv pevného schématu jako např. u~databází. Tato vlastnost se někdy označuje jako \emph{flexibilní schéma} \cite[s.~34]{LuceneAction}. Umožňuje například iterativně budovat index, protože nově nahraný index může být naprosto rozdílný, obsahovat jiná pole, od předchozího. Rovněž je možné do jednoho dokumentu uložit indexy reprezentující zcela jiné entity.
 
 \subsection{Analýza}
-V předchozích kapitolách jsou uvedeny fundamentální základy, na kterých Apache Lucene staví indexy, v~následujícím textu je podrobněji rozebrána nejdůležitější část indexačního procesu~--~analýza.
+V předchozích kapitolách jsou uvedeny základní principy, na kterých Apache Lucene staví indexy, v~následujícím textu je podrobněji rozebrána nejdůležitější část indexačního procesu~--~analýza.
 
 Nejdříve jsou vstupní data denormalizována do dokumentů, které jsou naplněny poli. Analýza v~Apache Lucene je proces převedení textových polí do základní indexované podoby -- do termů \cite[s.~28]{LuceneAction}. Analyzérem nazýváme komponentu, která zajišťuje analýzu. Ukažme si několik typických příkladů, co analyzéry dělají  \cite[s.~110]{LuceneAction}:
 
@@ -321,15 +348,14 @@ Uveďme příklady zabudovaných tokenizérů  \cite[s.~118]{LuceneAction}:
 	\item \texttt{StandardTokenizer} - pokročilý tokenizér založený na sofistikovaných gramatických pravidel, dokáže rozpoznat např. e-mailové adresy a předat je jako jediný token
 \end{itemize}
 
-\begin{figure}[!htbp]
-\begin{lstlisting}[frame=single]
+\begin{lstlisting}[caption =  Použití zabudovaných analyzérů pro větu {\emph{\uv{The quick brown fox jumped over the lazy dog}}}{,} převzato z {\cite[str. 111]{LuceneAction}}, label = AnalysisExample1]
 WhitespaceAnalyzer:
-[The] [quick] [brown] [fox] [jumped]
-[over] [the] [lazy] [dog]
+[The] [quick] [brown] [fox] [jumped] [over] [the] 
+[lazy] [dog]
 
 SimpleAnalyzer:
-[the] [quick] [brown] [fox] [jumped] 
-[over] [the] [lazy] [dog]
+[the] [quick] [brown] [fox] [jumped] [over] [the] 
+[lazy] [dog]
 
 StopAnalyzer:
 [quick] [brown] [fox] [jumped] [over] [lazy] [dog]
@@ -337,16 +363,13 @@ StopAnalyzer:
 StandardAnalyzer:
 [quick] [brown] [fox] [jumped] [over] [lazy] [dog]
 \end{lstlisting}
-\caption{Použití zabudovaných analyzérů pro větu \emph{\uv{The quick brown fox jumped over the lazy dog}}}
-\label{AnalysisExample1}
-\end{figure}
 
 Představme rovněž i několik základních filtrů  \cite[s.~118]{LuceneAction}
 \begin{itemize}
 	\item \texttt{LowerCaseFilter} - převede token na malá písmena
 	\item \texttt{StopFilter} - odstraní tokeny, které se nacházejí v~předaném seznamu
-	\item \texttt{PorterStemFilter} - převádí tokeny na jejich kořen (\emph{stemming})
-	\item \texttt{LengthFilter} - akceptuje tokeny, jejichž délka spadá do určitého rozsahu
+%%	\item \texttt{PorterStemFilter} - převádí tokeny na jejich kořen (\emph{stemming})
+%%	\item \texttt{LengthFilter} - akceptuje tokeny, jejichž délka spadá do určitého rozsahu
 	\item \texttt{StandardFilter} - navržen pro spolupráci s~tokenizérem StandardTokenizer, odstraňuje tečky z~akronymů a \uv{'s} (apostrof následovaný písmenem s)
 \end{itemize}
 
@@ -359,8 +382,7 @@ Aby byl výčet kompletní, následuje přehled zabudovaných analyzérů. Zabud
 	\item \texttt{StandardAnalyzer} - nejpropracovanější zabudovaný analyzér, využívá \texttt{LowerCaseTokenizer}, \texttt{StopFilter}, navíc však přidává i propracovanou logiku, která dokáže např. rozeznat e-mailové adresy, názvy společností atd.
 \end{itemize}
 
-\begin{figure}[h!]
-\begin{lstlisting}[frame=single]
+\begin{lstlisting}[caption =  Použití zabudovaných analyzérů pro větu {\emph{\uv{XY\&Z Corporation - xyz@example.com}}}{,} převzato z {\cite[str. 112]{LuceneAction}} , label = AnalysisExample2]
 WhitespaceAnalyzer:
 [XY&Z] [Corporation] [-] [xyz@example.com]
 
@@ -373,16 +395,14 @@ StopAnalyzer:
 StandardAnalyzer:
 [xy&z] [corporation] [xyz@example.com]
 \end{lstlisting}
-\caption{Použití zabudovaných analyzérů pro větu \emph{\uv{XY\&Z Corporation - xyz@example.com}}}
-\label{AnalysisExample2}
-\end{figure}
 
-Popis analýzy je zakončen ukázkami, jaké tokeny jednotlivé zabudované analyzéry vytvoří ze dvou anglických (obrázek \ref{AnalysisExample1} a \ref{AnalysisExample2}).
+Popis analýzy je zakončen ukázkami, jaké tokeny jednotlivé zabudované analyzéry vytvoří ze dvou anglických (ukázky \ref{AnalysisExample1} a \ref{AnalysisExample2}).
 
 Pomocí vhodně nastavené analýzy lze řešit všechny nedostatky, které má vyhledávání pomocí SQL, viz. kapitola \ref{ProblemyVyhledavaniSQL}. Ukazuje se, že Apache Lucene (resp. fulltextové vyhledávání) je správným nástrojem k~vytváření sofistikovanějšího vyhledávání, které lépe splní požadavky uživatele.
 
-\begin{figure}[hb]
-\begin{lstlisting}[frame=single]
+\newpage
+
+\begin{lstlisting}[caption =  Zpřístupnění entity pro vyhledávání v~Hibernate Search, label = ExampleHibernateSearch]
 @Entity
 @Indexed
 public class Person {
@@ -397,15 +417,13 @@ public class Person {
 	@Field 
 	private String lastName;
 }
-	\end{lstlisting}
-	\caption{Zpřístupnění entity pro vyhledávání v~Hibernate Search}
-	\label{ExampleHibernateSearch}
-\end{figure}
+\end{lstlisting}
+
 
 \section{Hibernate Search}
-Po rozmachu technologie \emph{objektově relačního mapování} (ORM, \emph{Object-Relational Mapping}) na platformě Java a její nejznámější implementace Hibernate Core \cite[s.~29]{HibernateSearchAction} bylo nutné dát tomuto nástroji možnosti fulltextového vyhledávání, o~což se postarala knihovna Hibernate Search. Hibernate Search je volně šiřitelná knihovna napsaná Emmanuelem Bernardem, která doplňuje Hibernate Core o~možnosti fulltextového vyhledávání pomocí kombinace s~Apache Lucene  \cite[s.~29]{HibernateSearchAction}. Hibernate Search se snaží zabalit komplexnost Apache Lucene do jednoduší podoby a integrovat funkčnost do Hibernate ORM. S~minimálním úsilím řeší převod objektového datového modelu do podoby přijatelné pro Apache Lucene, čímž výrazně usnadňuje její použití.
+Po rozmachu technologie \emph{objektově relačního mapování} (ORM, \emph{Object-Relational Mapping}) na platformě Java a její nejznámější implementace Hibernate Core \cite[s.~29]{HibernateSearchAction} bylo nutné dát tomuto nástroji možnosti fulltextového vyhledávání. Hibernate Search je volně šiřitelná knihovna napsaná Emmanuelem Bernardem, která doplňuje Hibernate Core o~možnosti fulltextového vyhledávání pomocí kombinace s~Apache Lucene  \cite[s.~29]{HibernateSearchAction}. Hibernate Search se snaží integrovat funkčnost Apache Lucene do Hibernate ORM. S~minimálním úsilím řeší převod objektového datového modelu do podoby přijatelné pro Apache Lucene, čímž výrazně usnadňuje její použití.
 
-Obrázek \ref{ExampleHibernateSearch} demonstruje, jak snadno lze s~využitím Hibernate Search zpřístupnit entitu pro fulltextové vyhledávání. Entita musí být označena anotací \texttt{@Indexed}  \cite[s.~38]{HibernateSearchAction}. Dále přidáme anotaci \texttt{@DocumentId} k~primárnímu klíči, a poté označíme atributy, podle kterých chceme vyhledávat anotací \texttt{@Field}  \cite[s.~38]{HibernateSearchAction}. V~momentě uložení entity Hibernate Search vyřeší přidání uvedených atributů do indexu, tedy denormalizuje entitu. Jelikož je to však pod povrchem stále Apache Lucene, jsou k~dispozici všechny možnosti, které nabízí, nyní v~přístupnější formě.
+Ukázka \ref{ExampleHibernateSearch} demonstruje, jak snadno lze s~využitím Hibernate Search zpřístupnit entitu pro fulltextové vyhledávání. Entita musí být označena anotací \texttt{@Indexed}  \cite[s.~38]{HibernateSearchAction}. Dále přidáme anotaci \texttt{@DocumentId} k~primárnímu klíči, a poté označíme atributy, podle kterých chceme vyhledávat anotací \texttt{@Field}  \cite[s.~38]{HibernateSearchAction}. V~momentě uložení entity Hibernate Search vyřeší přidání uvedených atributů do indexu, tedy denormalizuje entitu. Jelikož je to však pod povrchem stále Apache Lucene, jsou k~dispozici všechny možnosti, které nabízí, nyní v~přístupnější formě.
 
 Integrace s~Hibernate Core elegantně řeší jeden podstatný problém, který vyvstává s~použitím čistě Apache Lucene -- synchronizaci fulltextového indexu a obsahu databáze. Jsou to v~zásadě dvě zcela oddělená datová úložiště, která spolu úzce souvisí. Pokud je použita přímo Apache Lucene, je nutné se po manipulaci s~objektem v~databázi explicitně postarat o~úpravu příslušného indexu, což je pro programátora práce navíc. Oproti tomu Hibernate Search je navázán na události Hibernate Core, tudíž při úpravě objektu v~databázi je automaticky spuštěn proces aktualizace indexu, aby spolu byla data v~databázi a fulltextovém indexu synchronizována  \cite[s.~24]{HibernateSearchAction}. 
 
@@ -433,13 +451,13 @@ Hibernate Search řeší výše uvedené problémy automaticky za programátora 
 
 \section{Elasticsearch}
 \label{ElasticsearchChapter}
-Elasticsearch je distribuovaný vyhledávácí a analytický nástroj v~reálném čase \cite{ElasticsearchDefinitiveGuide}. Historie této technologie se začala psát v~roce 2004, kdy Shay Banon vytvořil \emph{Compass}. Postupným vývojem a změnou požadavků však dospěl k~názoru, že aby se mohl Compass stát distribuovanou technologií, bylo by zapotřebí ho značnou část přepsat. Rozhodl se proto naprogramovat zcela nový nástroj, který měl být již od počátku distribuovaný. První verze Elasticsearch byla vydána v~únoru 2010 \cite{ElasticsearchWiki}.
+Elasticsearch je distribuovaný vyhledávácí a analytický nástroj pracující v~reálném čase \cite{ElasticsearchDefinitiveGuide}. Historie této technologie se začala psát v~roce 2004, kdy Shay Banon vytvořil \emph{Compass}. Postupným vývojem a změnou požadavků však dospěl k~názoru, že aby se mohl Compass stát distribuovanou technologií, bylo by zapotřebí ho značnou část přepsat. Rozhodl se proto naprogramovat zcela nový nástroj, který měl být již od počátku distribuovaný. První verze Elasticsearch byla vydána v~únoru 2010 \cite{ElasticsearchWiki}.
 
-Elasticsearch je rovněž postaven na dříve představené technologii Apache Lucene, k~níž však přidává další klíčové vlastnosti. Řeč je zejména o~celé architektuře. Elasticsearch není na rozdíl od Apache Lucene knihovnou, Elasticsearch tvoří samostatný distribuovaný systém serverů, které na pozadí používají Apache Lucene, ovšem skrývají její složitost a poskytují služby v~mnohem jednodušším uživatelském API. Velký důraz je kladen právě na distribuovanost celého systému, proto je Elasticsearch vysoce škálovatelný, schopný vytvořit klastr několika stovek serverů, a tím zajistit vysoký výkon i při několika petabajtech dat, což patří mezi hlavní přidanou hodnotu navrch k~Apache Lucene \cite{ElasticsearchDefinitiveGuide}.
+Elasticsearch využívá Apache Lucene, nicméně architekturou je Elasticsearch middleware, který je při nasazení distribuován na množinu serverů. Každý tento server využívá Apache Lucene. Výsledkem je zapouzdření funkcionality Apache Lucene a poskytutí API v jednoduší formě. Velký důraz je kladen právě na distribuovanost celého systému, proto je Elasticsearch vysoce škálovatelný, schopný vytvořit klastr několika stovek serverů, a tím zajistit vysoký výkon i při několika petabajtech dat, což patří mezi hlavní přidanou hodnotu navrch k~Apache Lucene \cite{ElasticsearchDefinitiveGuide}.
 
-Základním způsobem komunikace se serverem Elasticsearch je REST (\emph{Representational State Transfer}) API posílající JSON (\emph{JavaScript Object Notation}) objekty. Tím je zajištěna naprostá nezávislost na programovacím jazyku, komunikace může probíhat přímo i z~příkazové řádky. Do některých jazyků, jako například Java, PHP, Python, však byli napsáni klienti, kteří umožňují komunikaci přímo z~onoho jazyka. 
+Základním způsobem komunikace se serverem Elasticsearch je REST (\emph{Representational State Transfer}) API posílající JSON (\emph{JavaScript Object Notation}) objekty. Tím je zajištěna nezávislost na programovacím jazyku, komunikace může probíhat přímo i z~příkazové řádky. Pro některé jazyky byly již vytvořeny knihovny umožňující komunikaci skrze proprietálního klienta. Jedná se například o jazyky: Java, PHP, Python. 
 
-Za zmínku stojí, kam Elasticsearch ukládá dokumenty. Struktura Elasticsearch se podobá modelu relační databáze, proto je pro lepší představu uvedena paralela. Elasticsearch klastr může obsahovat několik \emph{indexů} (\emph{index}, obdoba databáze), indexy obsahují \emph{typy} (\emph{type}, paralela s~dabázovou tabulkou). Typy mohou držet několik \emph{dokumentů} (\emph{document}, záznam v~tabulce), které mají několik \emph{polí} (\emph{field}, sloupec v~tabulce). Pro přístup k~hodnotám se pak využívá cesty $<index>/<typ>/<id\_dokumentu>/<pole>$ \cite{ElasticsearchDefinitiveGuide}.
+Za zmínku stojí, kam Elasticsearch ukládá dokumenty. Struktura Elasticsearch se podobá modelu relační databáze, proto je pro lepší představu uvedena paralela. Elasticsearch klastr může obsahovat několik \emph{indexů} (\emph{index}, obdoba databáze), indexy obsahují \emph{typy} (\emph{type}, paralela s~dabázovou tabulkou). Typy mohou držet několik \emph{dokumentů} (\emph{document}, podobnost s řádkem v~tabulce), které mají několik \emph{polí} (\emph{field}, analogie ke sloupci tabulky). Pro přístup k~hodnotám se pak využívá cesty $<index>/<typ>/<id\_dokumentu>/<pole>$ \cite{ElasticsearchDefinitiveGuide}.
 
 Stejně jako Hibernate Search je i Elasticsearch zaobalená knihovna Apache Lucene s~několika přidanými hodnotami \cite{ElasticsearchDefinitiveGuide}. 
 
@@ -468,7 +486,7 @@ Hlavním úkolem je vytvořit funkční fulltextové vyhledávání v~systému e
 		Vytvořit jednoduché uživatelské rozhraní, které umožní pokládat dotazy a zároveň zobrazí výsledky.		
 \end{itemize}
 
-Protože je nezbytné vybrat vhodné vlastnosti entit, které mají být indexovány, je nutné specifikovat dotazy, které by uživatel mohl chtít položit a systém by na ně měl umět vrátit požadovanou odpověď. Kromě obecného zadání fráze, na jejímž základě mají být vráceny relevantní požadavky, je žadoucí umožnit uživateli zadat vlastnosti, které musí požadavek splňovat a všechny nevyhovující odfiltrovat, například vyhledat všechny požadavky na dotaz \uv{NullPointerException}, ale pouze ty přiřazené k~projektu \uv{Infinispan}. Následuje výčet vlastností, které může uživatel explicitně zadat, a podle kterých systém umožní požadavky filtrovat:
+Protože je nezbytné vybrat vhodné vlastnosti entit, které mají být indexovány, je nutné specifikovat dotazy, které by uživatel mohl chtít položit a systém by na ně měl umět vrátit požadovanou odpověď. Kromě obecného zadání fráze, na jejímž základě mají být vráceny relevantní požadavky, je žadoucí umožnit uživateli zadat vlastnosti, které musí požadavek splňovat a všechny nevyhovující odfiltrovat, například vyhledat všechny požadavky na dotaz \uv{Failing unit tests}, ale pouze ty přiřazené k~projektu \uv{Infinispan}. Následuje výčet vlastností, které může uživatel explicitně zadat, a podle kterých systém umožní požadavky filtrovat:
 \begin{itemize}
 	\item projekt, ke kterému je požadavek přiřazen
 	\item status, v~němž se požadavek nachází
@@ -484,9 +502,9 @@ Protože je nezbytné vybrat vhodné vlastnosti entit, které mají být indexov
 Dalším bodem ze zadání je vytvořit mechanismus pro import dat z~již existujícího systému správy požadavků do systému eShoe. Systém musí být schopen na základě předaného seznamu požadavků z~onoho existujícícho systému namapovat požadavky na datový model systému eShoe, uložit je do databáze a fulltextového indexu.
 
 \section{Návrh}
-V předchozí sekci je uvedena specifikace, kterou musí implementace splňovat. Následující text popisuje fázi návrhu, jak budou jednotlivé body specifikace vyřešeny. 
+V předchozí sekci je uvedena specifikace, kterou musí implementace splňovat. Následující text popisuje návrh, jak budou jednotlivé body specifikace vyřešeny. 
 
-Pro implementaci fulltextového vyhledávání byla zvolena technologie Elasticsearch z~následujících důvodů. Jedná se o~relativně mladou technologii, která je však postavena na osvědčené Apache Lucene, s~aktivní komunitní základnou a stálým vývojem. Je používána např. serverem GitHub\footnote{\texttt{http://www.github.com}} \cite{ElasticsearchDefinitiveGuide}, z~čehož lze usuzovat, že poskytne i dostatečný výkon. Kromě toho nám Elasticsearch přišel subjektivně nejvíce elegantní.
+Pro implementaci fulltextového vyhledávání byla zvolena technologie Elasticsearch z~následujících důvodů. Jedná se o~technologii, která je postavena na osvědčené Apache Lucene, s~aktivní komunitní základnou a stálým vývojem. Je používána např. serverem GitHub\footnote{\texttt{http://www.github.com}} \cite{ElasticsearchDefinitiveGuide}, z~čehož lze usuzovat, že poskytne i dostatečný výkon. Kromě toho nám Elasticsearch přišel subjektivně nejvíce elegantní a použití Elasticsearch bylo vyžadováno zadavatelem práce.
 
 \subsection{Indexace}
 \label{NavrhIndexace}
@@ -507,7 +525,7 @@ Jakmile jsou data zaindexována, lze přistoupit k~vlastnímu vyhledávání. Je
 
 Základním způsobem je tvorba dotazu přes uživatelské rozhraní, na pozadí by se postupně budoval objekt reprezentující dotaz pro Elasticsearch. Je potřeba však brát v~potaz uživatele, kteří by chtěli vyhledávání používat skrze nějaký automatizovaný mechanismus, nikoliv ručně klikáním na komponenty v~GUI. Pro ty by automatizace tvorby dotazu nebyla jednoduchá.
 
-Další možností je vytvořit vlastní dotazovací jazyk, jako má např. \emph{Attlasian JIRA}\footnote{\texttt{https://www.atlassian.com/software/jira}}. Uživatel by dostal možnost vytvářet dotazy buď klikáním v~GUI, nebo by rovnou mohl napsat dotaz v~dotazovacím jazyce. Proces automatizace se tím velice zjednodušuje na předání vytvořeného dotazu v~dotazovacím jazyce do parametru stránky. Pro některé uživatele je dokonce pohodlnější napsat dotaz rovnou v~dotazovacím jazyce, pokud je dostatečně jednoduchý. Pro poskytnutí maximálně flexibility se přikláníme k~tomuto řešení.
+Další možností je vytvořit vlastní dotazovací jazyk, jako má např. \emph{Attlasian JIRA}\footnote{\texttt{https://www.atlassian.com/software/jira}}. Uživatel by dostal možnost vytvářet dotazy buď klikáním v~GUI, nebo by rovnou mohl napsat dotaz v~dotazovacím jazyce. V budoucnu pak není problém naprogramovat přístupový bod např. skze REST API, který by umožňoval v systému vyhledávat pomocí těchto dotazů. Tím by se proces automatizace velice zjednodušil. Pro některé uživatele je dokonce pohodlnější napsat dotaz rovnou v~dotazovacím jazyce, pokud je dostatečně jednoduchý. Pro poskytnutí maximálně flexibility se přikláníme k~tomuto řešení.
 
 Vyhledávání bude probíhat na základě dotazu vytvořeném ve vlastním dotazovacím jazyce. Uživatelské rozhraní bude sloužit jako tvůrce oněch dotazů umožňující rovněž zadávání dotazu přímo. Dotazovací jazyk bude mít následující vlastnosti:
 \begin{itemize}
@@ -517,35 +535,23 @@ Vyhledávání bude probíhat na základě dotazu vytvořeném ve vlastním dota
 	\item předchozí body libovolně kombinovat
 \end{itemize}
 
-Uvedený jazyk by měl být co nejjednoduší a mít intuitivní syntaxi. Obrázky \ref{QueryLanguageExample1}, \ref{QueryLanguageExample2} a \ref{QueryLanguageExample3} uvádí příklady, jak bude výsledný dotazovací jazyk vypadat.
+Uvedený jazyk by měl být co nejjednoduší a mít intuitivní syntaxi. Ukázky \ref{QueryLanguageExample1}, \ref{QueryLanguageExample2} a \ref{QueryLanguageExample3} uvádí příklady, jak bude výsledný dotazovací jazyk vypadat.
 
-\begin{figure}[htbp]
-\begin{lstlisting}[frame=single]
-text ~ "NullPointerException"
+\begin{lstlisting}[caption =  Vyhledání fráze {\uv{Failing unit tests}} pouze u projektu {\uv{Infinispan}}, label = QueryLanguageExample1]
+text ~ "Failing unit tests"
 AND project = "Infinispan"
 \end{lstlisting}
-\caption{Vyhledání fráze \uv{NullPointerException} pouze u projektu \uv{Infinispan}}
-\label{QueryLanguageExample1}
-\end{figure}
 
-\begin{figure}[htbp]
-\begin{lstlisting}[frame=single]
-text ~ "NullPointerException" 
+\begin{lstlisting}[caption =  Vyhledání fráze {\uv{Failing unit tests}} u požadavků se statusem {\uv{Unresolved}} nebo \uv{Open}, label = QueryLanguageExample2]
+text ~ "Failing unit tests" 
 AND status IN ("Unresolved", "Open")
 \end{lstlisting}
-\caption{Vyhledání fráze \uv{NullPointerException} u požadavků se statusem \uv{Unresolved} nebo \uv{Open}}
-\label{QueryLanguageExample2}
-\end{figure}
 
-\begin{figure}[htbp]
-\begin{lstlisting}[frame=single]
-text ~ "NullPointerException" 
+\begin{lstlisting}[caption =  Kombinace dotazů {\ref{QueryLanguageExample1}} a {\ref{QueryLanguageExample2}}, label = QueryLanguageExample3]
+text ~ "Failing unit tests" 
 AND project = "Infinispan" 
 AND status IN ("Unresolved", "Open")
 \end{lstlisting}
-\caption{Kombinace dotazů \ref{QueryLanguageExample1} a \ref{QueryLanguageExample2}}
-\label{QueryLanguageExample3}
-\end{figure}
 
 \subsection{Uživatelské rozhraní}
 Přestože zadání práce uživatelské rozhraní nevyžaduje, rozhodli jsme se jej zahrnout, aby byla demostrace výsledků snažší a byl poskytnut prototyp pro další rozvíjení. Součástí grafického rozhraní budou tři textová pole a tři pole pro vybrání ze seznamu. Textová pole budou použita pro zadání fráze pro vyhledání a ohraničení časového úseku, kdy byl požadavek vytvořen. Pole s~předem daným seznamem prvků budou sloužit ke zvolení typů požadavků, jejich statusů a projektů, ke kterým mají být požadavky přiřazeny. Tato pole musí podporovat výběr více možností najednou. GUI rovněž umožní jednoduchý výpis nalezených požadavků.
@@ -557,30 +563,29 @@ Součástí specifikace je i import dat z~již existujícího systému pro sprá
 \label{ElasticsearchAnnotationsChapter}
 Při návrhu (viz. kapitola \ref{NavrhIndexace}) jsme se rozhodli naprogramovat nový mechanismus pro zajištění denormalizace entit a automatické úpravy indexu na základě anotací. Následující text podrobně probírá architekturu projektu Elasticsearch-Annotations. 
 
-Elasticsearch-Annotations je rozdělen do několika balíků, z~nichž každý je zodpovědný za určitou funkčnost:
-\begin{itemize}
-	\item \texttt{com.gihub.holmistr.esannotations.commons} \\
-		Obsahuje pomocné třídy, jejichž funčknost je následně využita v~ostatních třídách.
+%%Elasticsearch-Annotations je rozdělen do několika balíků, z~nichž každý je zodpovědný za určitou funkčnost:
+%%\begin{itemize}
+%%	\item \texttt{com.gihub.holmistr.esannotations.commons} \\
+%%		Obsahuje pomocné třídy, jejichž funčknost je následně využita v~ostatních třídách.
+%%
+%%	\item \texttt{com.github.holmistr.esannotations.indexing} \\
+%%		Hlavní balík obsahující veškerou funkčnost indexační části projektu.
+%%
+%%	\item \texttt{com.github.holmistr.esannotations.indexing.annotations} \\
+%%		Balík anotací, které projekt nabízí a na jejichž základě vytváří/upravuje index.
+%%
+%%	\item \texttt{com.github.holmistr.esannotations.indexing.builder} \\
+%%		Implementace vnitřní struktury pro postupné vytváření indexu.
+%%
+%%	\item \texttt{com.github.holmistr.esannotaitons.search} \\
+%%		Zodpovídá za zpracování vyhledávacích dotazů.		 
+%%\end{itemize}
 
-	\item \texttt{com.github.holmistr.esannotations.indexing} \\
-		Hlavní balík obsahující veškerou funkčnost indexační části projektu.
-
-	\item \texttt{com.github.holmistr.esannotations.indexing.annotations} \\
-		Balík anotací, které projekt nabízí a na jejichž základě vytváří/upravuje index.
-
-	\item \texttt{com.github.holmistr.esannotations.indexing.builder} \\
-		Implementace vnitřní struktury pro postupné vytváření indexu.
-
-	\item \texttt{com.github.holmistr.esannotaitons.search} \\
-		Zodpovídá za zpracování vyhledávacích dotazů.		 
-\end{itemize}
-
-Kromě výše uvedených balíků je dále přítomna sada testů, která kompletně pokrývá funčknost projektu. 
+%%Kromě výše uvedených balíků je dále přítomna sada testů, která kompletně pokrývá funčknost projektu. 
 
 \section{Anotace}
 \label{EsAnnotationsAnotace}
-\begin{figure}[!htbp]
-\begin{lstlisting}[frame=single]
+\begin{lstlisting}[caption =  Užití anotací Elasticsearch-Annotations, label = AnnotationsExample]
 @Indexed(index = "people", type="person")
 public class Person {
 
@@ -594,9 +599,6 @@ public class Person {
 	private Address address;
 }
 \end{lstlisting}
-\caption{Užití anotací Elasticsearch-Annotations}
-\label{AnnotationsExample}
-\end{figure}
 
 Základním stavebním kamenem projektu jsou anotace. Sada poskytovaných anotací je inspirována Hibernate Search a snaží se rovněž podobat i funkčností, aby byl případný přechod z~Hibernate Search co možná nejjednoduší. Jejich dopad na výsledné chování je popsán v~následující kapitole \ref{EsAnnotationsIndexacniCast}. Seznam nabízených anotací:
 \begin{itemize}
@@ -616,7 +618,7 @@ Základním stavebním kamenem projektu jsou anotace. Sada poskytovaných anotac
 	Použitelná pro atributy neprimitivního typu, především uživatelsky definované typy, kolekce (implementace rozhraní \texttt{java.util.Collection}, mapy (implementace rozhraní \texttt{java.util.Map}) a pole. Označuje relaci mezi entitami. Stejně jako anotace \texttt{@Field} umožňuje zadat parametr \texttt{name} se stejnou funkčností. Navíc může přebírat parametr \texttt{depth}, který omezuje počet úrovní indexace odkazované entity. Funkci této anotace podrobně rozebírá část \ref{EsAnnotationsIndexacniCast}.
 \end{itemize}
 
-Obrázek \ref{AnnotationsExample} ukazuje příklad použití (s výjimkou \texttt{@ContainedIn}) všech anotací na jednoduché entitě.
+Ukázka \ref{AnnotationsExample} demonstruje použití (s výjimkou \texttt{@ContainedIn}) všech anotací na jednoduché entitě.
 
 \section{Architektura indexační části}
 Text dále se věnuje architektuře indexace projektu Elasticsearch-Annotations. O~tom, jak spolu jednotlivé třídy spolupracují a jak různá nastavení ovlivní výsledek, pojednává kapitola \ref{EsAnnotationsIndexacniCast}.
@@ -629,7 +631,7 @@ Text dále se věnuje architektuře indexace projektu Elasticsearch-Annotations.
 	\label{EsAnnotationsIndexaceArchitektura1}
 \end{figure}
 
-Kromě uvedených anotací (viz. \ref{EsAnnotationsAnotace}) se dá indexační část projektu rozdělit do dvou částí: řídící třídy a procesory (implementace abstraktní třídy \texttt{Processor}). Diagram řídících tříd ukazuje obrázek \ref{EsAnnotationsIndexaceArchitektura1}, procesorů pak obrázek \ref{EsAnnotationsIndexaceArchitektura2}.
+Kromě uvedených anotací (viz. \ref{EsAnnotationsAnotace}) se dá indexační část projektu rozdělit do dvou částí: řídící třídy a procesory (implementace abstraktní třídy \texttt{Processor}). Diagram řídících tříd ukazuje obrázek \ref{EsAnnotationsIndexaceArchitektura1}.
 
 Vstupním bode indexace je třída \texttt{AnnotationIndexManager}. Při vytváření instance této třídy je nutné předat konstruktoru implementaci rozhraní \texttt{org.elasticsearch.client.Client}, která reprezentuje uživatelem nakonfigurovaného klienta, skrze kterého bude komunikováno s~Elasticsearch serverem. \texttt{AnnotationIndexManager} obsahuje metodu \texttt{index(Object entity)}, které je jako parametr předána anotacemi označená entita. Následně je vytvořena instance třídy \texttt{AnnotationIndexer}, která se postará o~vlastní denormalizaci entity do formátu JSON dokumentu na základě přidružených anotací.
 
@@ -649,18 +651,9 @@ Vstupním bode indexace je třída \texttt{AnnotationIndexManager}. Při vytvá�
 
 Procesorům je skrze konstruktory předávána implementace rozhraní \texttt{Builder}. Toto rozhraní představuje datovou strukturu, která je použita pro průběžné budování indexu, v~našem případě je jedinou implementací třída \texttt{MapAppendBuilder}. Funguje podobně jako mapa, ovšem při pokusu o~uložení další hodnoty se stejným klíčem je hodnota přiřetězena k~předchozí, nikoliv přepsána. Této vlastnosti je využito u indexace kolekcí, map a polí, aby všechny hodnoty byly k~nalezení pod jedním klíčem v~JSON dokumentu a daly se následně předat Elasticsearch serveru, který je mohl zaindexovat. 
 
-\begin{figure}[htp]
-	\begin{center}
-		\includegraphics[width=340pt]{esannotations_class_diagram2}
-	\end{center}
-	\caption{Procesory Elasticsearch-Annotations}	
-	\label{EsAnnotationsIndexaceArchitektura2}
-\end{figure}
+Po denormalizace třídou \texttt{AnnotationIndexer}, \texttt{AnnotationIndexManager} pomocí metody \texttt{getCompleteIndexChanges()} získá seznam všech dokumentů v~indexu, které je potřeba upravit a jejich nové hodnoty ve formátu JSON. Následně je vytvořen požadavek skrze předaného Elasticsearch klienta, jemuž je předán JSON dokument. Požadavek je poté odeslán na server, který se již postará o~jeho zaindexování (viz. ukázka \ref{EsAnnotationsIndexaceOdeslaniPozadavkuExample}). Umístění dokumentu závisí na nastavených parametrech anotace \texttt{@Indexed} a hodnotě ID dokumentu označeného anotací \texttt{@DocumentId}.
 
-Po denormalizace třídou \texttt{AnnotationIndexer}, \texttt{AnnotationIndexManager} pomocí metody \texttt{getCompleteIndexChanges()} získá seznam všech dokumentů v~indexu, které je potřeba upravit a jejich nové hodnoty ve formátu JSON. Následně je vytvořen požadavek skrze předaného Elasticsearch klienta, jemuž je předán JSON dokument. Požadavek je poté odeslán na server, který se již postará o~jeho zaindexování (viz. obrázek \ref{EsAnnotationsIndexaceOdeslaniPozadavkuExample}). Umístění dokumentu závisí na nastavených parametrech anotace \texttt{@Indexed} a hodnotě ID dokumentu označeného anotací \texttt{@DocumentId}.
-
-\begin{figure}[!htbp]
-\begin{lstlisting}[frame=single]
+\begin{lstlisting}[caption =  Odeslání požadavku na vytvoření/úpravu indexu, label = EsAnnotationsIndexaceOdeslaniPozadavkuExample]
 IndexResponse response = client
 	.prepareIndex(index, type, documentId)
 	.setSource(jsonSource)
@@ -668,9 +661,6 @@ IndexResponse response = client
 	.execute()
 	.actionGet();
 \end{lstlisting}
-\caption{Odeslání požadavku na vytvoření/úpravu indexu}
-\label{EsAnnotationsIndexaceOdeslaniPozadavkuExample}
-\end{figure}
 
 \newpage
 
@@ -680,8 +670,7 @@ Následující text se věnuje významu jednotlivých anotací a kdy kterou pou�
 
 Použití anotace \texttt{@Field} je triviální. Do indexu bude uložena přímo hodnota atributu, neboť je tato anotace použitelná pouze na primitivní datové typy. Hodnota klíče je odvozena z~předaného parametru \texttt{name}, případně ze jména atributu, jak bylo popsáno v~kapitole \ref{EsAnnotationsAnotace}. 
 
-\begin{figure}[hb]
-\begin{lstlisting}[frame=single]
+\begin{lstlisting}[caption =  Užití anotací pro indexaci vztahů mezi entitami, label = IndexingRelationsExample]
 public class Director {
 	@Field private String name;
 	@ContainedIn private Movie movie;
@@ -698,13 +687,10 @@ movie.setDirector(director);
 
 annotationIndexManager.index(director);
 \end{lstlisting}
-\caption{Užití anotací pro indexaci vztahů mezi entitami}
-\label{IndexingRelationsExample}
-\end{figure}
 
 Dále je potřeba vyřešit problém denormalizace vztahů, který je popsán v~kapitole \ref{HibernateSearchDenormalizace}. K~označení indexace atributů neprimitivního typu je využita anotace \texttt{@IndexEmbedded}. V~případě, že se jedná o~vnořený objekt, stačí příslušný atribut označit anotací \texttt{@IndexEmbedded}. Indexační mechanismus přidá do indexu rekurzivně všechny atributy označené anotací \texttt{@Field} vnořeného objektu tak, že před jméno klíče vnořeného atributu přidá klíč atributu z~\uv{rodičovské} entity oddělený tečkou. V~případě, vnořená entita obsahuje další atribut označený anotací \texttt{@IndexEmbedded}, je pokračováno rekuzivně dále. Jde o~stejné chování jako u Hibernate Search, viz. obrázek \ref{HibernateSearchDenormalizationExample}.
 
-Druhým ze vztahů, když jednotlivé entity spolu sice souvisejí, ale mohou existovat i nezávisle, je řešen následovně. Elasticsearch-Annotation potřebude vědět, ve kterých ostatních entitách je právě indexovaná entita zmíněna. K~tomu slouží anotace \texttt{@ContainedIn}. Tato anotace říká, že v~případě, že je entita změněna, je nutné provést aktualizaci indexu všech entit, na které je ukázáno pomocí \texttt{@ContainedIn}. To nutí označit vztah na obou stranách, na straně vlastníka vztahu (toho, přes něhož můžeme následně vyhledávat s~informacemi o~rsouvisející entitě) anotací \texttt{@IndexEmbedded} a na straně odkazované entity pomocí \texttt{@ContainedIn}. Obrázek \ref{IndexingRelationsExample} ukazuje kompletní příklad, kvůli úspornosti je vynechán všechen nepodstatný kód.
+Druhým ze vztahů, když jednotlivé entity spolu sice souvisejí, ale mohou existovat i nezávisle, je řešen následovně. Elasticsearch-Annotation potřebude vědět, ve kterých ostatních entitách je právě indexovaná entita zmíněna. K~tomu slouží anotace \texttt{@ContainedIn}. Tato anotace říká, že v~případě, že je entita změněna, je nutné provést aktualizaci indexu všech entit, na které je ukázáno pomocí \texttt{@ContainedIn}. To nutí označit vztah na obou stranách, na straně vlastníka vztahu (toho, přes něhož můžeme následně vyhledávat s~informacemi o~rsouvisející entitě) anotací \texttt{@IndexEmbedded} a na straně odkazované entity pomocí \texttt{@ContainedIn}. Ukázka \ref{IndexingRelationsExample} uvádí kompletní příklad, kvůli úspornosti je vynechán všechen nepodstatný kód.
 
 Obrázek \ref{IndexingRelationsExampleResult} znázorňuje výsledný index. Za povšimnutí stojí, že správce indexu dostal za úkol zpracovat objekt \texttt{Director}, přesto je ve výsledku vytvořen i nový index entity \texttt{Movie} s~aktuálními daty. Rovněž ukažme na nepřítomnost atributu \texttt{movie} v~indexu \texttt{Director}. 
 
@@ -714,7 +700,7 @@ Tento mechanismus je rovněž inspirován Hibernate Search a je s~ním (téměř
 	\begin{center}
 		\includegraphics[width=340pt]{esannotations_associations_example}
 	\end{center}
-	\caption{Ilustrace výsledného indexu po provedení kódu v~obrázku \ref{IndexingRelationsExample}}	
+	\caption{Ilustrace výsledného indexu po provedení kódu v~ukázce \ref{IndexingRelationsExample}}	
 	\label{IndexingRelationsExampleResult}
 \end{figure}
 
@@ -749,7 +735,8 @@ Celý projekt Elasticsearch-Annotations je pokrytý jednotkovými a integrační
 Poslední fází je integrační test spolupráce třídy \texttt{AnnotationIndexManager} s~Elasticsearch serverem, kterého je docíleno použitím testovacího nástroje \emph{elasticsearch-test}\footnote{\texttt{https://github.com/tlrx/elasticsearch-test}}. Tento nástroj umožňuje v~prostředí JUnit testů snadno nastartovat Elasticsearch server pro testovací účely.
 
 \chapter{Implementace}
-Kapitola \ref{Analyza} představila specifikaci požadavků na vyhledávání v~systému eShoe a navrhla způsob, jakým budou řešeny. Následující text popisuje skutečnou implementaci uvedeného návrhu.
+\label{ImplementaceChapter}
+Kapitola \ref{Analyza} představila specifikaci požadavků na vyhledávání v~systému eShoe a navrhla způsob, jakým budou řešeny. Následující text popisuje implementaci uvedeného návrhu.
 
 \section{Indexace}
 \label{ImplementaceIndexace}
@@ -777,10 +764,9 @@ Pro splnění všech typů vyhledávacích dotazů byly k~indexaci vybrány nás
 
 Kromě zřejmé nutnosti indexace atributů, podle kterých se filtruje na přímou shodu (např. jméno projektu, typ požadavku atd.) jsou do indexu zahrnuty položky, ve kterých by se mohly nacházet relevantní informace vzhledem k~zadané frázi pro fulltextové vyhledávání. Jedná se o~atributy jména, shrnutí a popisu požadavku, rovněž jsou do indexu zahrnuty všechny komentáře k~požadavku. Indexace těchto položek by měla pomoci k~očekávanějším výsledkům, neboť pokud se zadaná fráze vyskytuje pouze ve jméně požadavku, měl by být požadavek ve výsledku logicky dále, než ten, který obsahuje frázi ve jméně, popisu a ještě několika komentářích.
 
-Pro navázání indexace na změny v~databázi byla vybrána servisní vrstva. Ta však z~předchozího vývoje systému chybí, je proto nově vytvořena v~balíku \texttt{com.issuetracker.service}. Posledním zajímavavým bodem je získání správce indexu (instance \texttt{AnnotationIndexManager} s~nakonfigurovaným klientem pro přístup k~serveru Elasticsearch) v~jednotlivých servisních třídách. Toho je dosaženo pomocí \emph{CDI} (\emph{Contexts and Dependency Injection}). Získat nakonfigurovanou instanci správce indexu lze pomocí anotace \texttt{@Inject}. Obrázek \ref{AnnotationIndexerProducer} ukazuje třídu \texttt{AnnotationIndexerProducer} a její metodu \texttt{getIndexManager}, která produkuje správce indexu, a tím jej umožňuje získat snadno kdekoliv v~aplikaci.
+Pro navázání indexace na změny v~databázi byla vybrána servisní vrstva. Ta však z~předchozího vývoje systému chybí, je proto nově vytvořena v~balíku \texttt{com.issuetracker.service}. Posledním zajímavavým bodem je získání správce indexu (instance \texttt{AnnotationIndexManager} s~nakonfigurovaným klientem pro přístup k~serveru Elasticsearch) v~jednotlivých servisních třídách. Toho je dosaženo pomocí \emph{CDI} (\emph{Contexts and Dependency Injection}). Získat nakonfigurovanou instanci správce indexu lze pomocí anotace \texttt{@Inject}. Ukázka \ref{AnnotationIndexerProducer} uvádí třídu \texttt{AnnotationIndexerProducer} a její metodu \texttt{getIndexManager}, která produkuje správce indexu, a tím jej umožňuje získat snadno kdekoliv v~aplikaci.
 
-\begin{figure}[htb]
-\begin{lstlisting}[frame=single]
+\begin{lstlisting}[caption =  Použití CDI pro získávání správce indexu, label = AnnotationIndexerProducer]
 @Produces
 public AnnotationIndexManager getIndexManager() {
     if(manager == null) {
@@ -789,17 +775,13 @@ public AnnotationIndexManager getIndexManager() {
     return manager;
 }
 \end{lstlisting}
-\caption{Použití CDI pro získávání správce indexu}
-\label{AnnotationIndexerProducer}
-\end{figure}
 
 \section{Vyhledávání}
 \label{ImplementaceVyhledavani}
 V předchozí kapitole je popsána implementace indexace entit. Následující text předpokládá, že data jsou úspěšně indexována serverem Elasticsearch a řeší, jakým způsobem jsou dotazována. Jak je uvedeno ve specifikaci (viz. kapitola \ref{SpecifikacePozadavku}), má být dotazování realizováno tvorbou dotazů ve vlastním dotazovacím jazyce.
 
-Byl vytvořen vlastní dotazovací jazyk pro účely eShoe. Obrázek \ref{DotazovaciJazykGramatika} ukazuje jeho gramatiku.
-\begin{figure}[htb]
-\begin{lstlisting}[frame=single]
+Byl vytvořen vlastní dotazovací jazyk pro účely eShoe. Ukázka \ref{DotazovaciJazykGramatika} definuje jeho gramatiku.
+\begin{lstlisting}[caption =  Gramatika dotazovacího jazyka eShoe, label = DotazovaciJazykGramatika]
 dotaz -> konjunkce
 konjunkce -> vyraz | vyraz AND konjunkce
 vyraz -> rovnost | mnozina | fulltext
@@ -808,9 +790,6 @@ mnozina -> <jmeno_atributu> =
 	(<hodnoty_v_uvozovkach_oddeleny_carkami>)
 fulltext -> text = "<fulltextova_fraze>"
 \end{lstlisting}
-\caption{Gramatika dotazovacího jazyka eShoe}
-\label{DotazovaciJazykGramatika}
-\end{figure}
 
 Podotkněme, že operátor \textasciitilde  (vlnka) je použitelný pouze s atributem \uv{text} a dohromady označují frázi pro fulltextové vyhledávání.
 
@@ -882,7 +861,7 @@ Následně jsou požadavky se zvolenými ID načteny přes REST API vzdáleného
 Po získání JSON odpovědi je nutné data namapovat na entity eShoe. Pro přehlednější práci jsme se rozhodli převést JSON do pomocných objektů, se kterými budeme následně pracovat. K tomu je využita třída \texttt{JsonParser}. Třída interně využívá knihovnu \emph{Jackson}\footnote{\texttt{https://github.com/FasterXML/jackson}} pro namapování JSON dokumentů na Java objekty. Jako pomocné třídy, na které se mapuje JSON odpověď, jsou vytvořeny \texttt{BugzillaBug}, \texttt{BugzillaBugResponse}, \texttt{BugzillaComment} a \texttt{BugzillaCommentReponse} tak, aby přesně odpovídaly struktuře vráceného JSON dokumentu, a tím mohly být úspěšně vytvořeny.
 
 Jakmile jsou pomocné objekty vytvořeny, třída \texttt{ImportServiceBean} vytvoří entity z datového modelu eShoe a pomocí \emph{set} metod je naplní odpovídajícími daty. Následně je předá servisní vrstvě, která je uloží do databáze i fulltextového indexu. 
-Zde je seznam všech entit a jejich vlastností, které se do systému importují:
+Následuje seznam hlavních entit a jejich vlastností, které jsou importovány. Jedná se především o vlastnosti bezprostředně související s vyhledáváním. Kompletní seznam je uveden v příloze \ref{PrilohaSeznamEntit}.
 \begin{itemize}
 	\item \texttt{Issue}
 		\begin{itemize}
@@ -891,52 +870,24 @@ Zde je seznam všech entit a jejich vlastností, které se do systému importuj�
 			\item vazba na uživatele, který požadavek vytvořil
 			\item vazba na uživatele, kterému je požadavek přiřazen
 			\item vazba na typ požadavku
-			\item vazba na projekt
-			\item vazba na komponentu projektu
-			\item vazba na verzi projektu
+			\item vazba na projekt			
 			\item vazba na status
 			\item vazba na komentáře k požadavku
 			\item datum vytvoření požadavku
 			\item datum poslední modifikace požadavku
 		\end{itemize}
-	\item \texttt{Project}
-		\begin{itemize}
-			\item jméno
-			\item vazba na verze projektu
-			\item vazba na komponenty projektu			
-		\end{itemize}
-	\item \texttt{ProjectVersion}
-		\begin{itemize}
-			\item jméno				
-		\end{itemize}
-	\item \texttt{Component}
-		\begin{itemize}
-			\item jméno
-		\end{itemize}
-	\item \texttt{IssueType}
-		\begin{itemize}
-			\item jméno
-		\end{itemize}
-	\item \texttt{Status}
-		\begin{itemize}
-			\item jméno
-		\end{itemize}
-	\item \texttt{User}
-		\begin{itemize}
-			\item jméno
-			\item příjmení
-		\end{itemize}
-	\item \texttt{Comment}
-		\begin{itemize}
-			\item obsah komentáře
-		\end{itemize}
+	\item \texttt{Project} -- jméno projektu
+	\item \texttt{IssueType} -- název typu požadavku
+	\item \texttt{Status} -- název statusu
+	\item \texttt{User} -- jméno a příjmení uživatele
+	\item \texttt{Comment} -- obsah komentáře
 \end{itemize}
 
 \section{Testy}
 
 \chapter{Závěr}
+\label{ZaverChapter}
 Závěr
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1001,6 +952,61 @@ Bugzilla::WebService::Server::REST. \textit{Bugzilla 4.5.4+ API Documentation} [
 
 %% Additional materials
 \appendix
+\chapter{Seznam importovaných entit}
+\label{PrilohaSeznamEntit}
+V rámci importu dat ze systému Red Hat Bugzilla jsou do systému eShoe zavedeny tyto entity a jejich atributy:
+\begin{itemize}
+	\item \texttt{Issue}
+		\begin{itemize}
+			\item jméno
+			\item priorita
+			\item vazba na uživatele, který požadavek vytvořil
+			\item vazba na uživatele, kterému je požadavek přiřazen
+			\item vazba na typ požadavku
+			\item vazba na projekt
+			\item vazba na komponentu projektu
+			\item vazba na verzi projektu
+			\item vazba na status
+			\item vazba na komentáře k požadavku
+			\item datum vytvoření požadavku
+			\item datum poslední modifikace požadavku
+		\end{itemize}
+	\item \texttt{Project}
+		\begin{itemize}
+			\item jméno
+			\item vazba na verze projektu
+			\item vazba na komponenty projektu			
+		\end{itemize}
+	\item \texttt{ProjectVersion}
+		\begin{itemize}
+			\item jméno				
+		\end{itemize}
+	\item \texttt{Component}
+		\begin{itemize}
+			\item jméno
+		\end{itemize}
+	\item \texttt{IssueType}
+		\begin{itemize}
+			\item jméno
+		\end{itemize}
+	\item \texttt{Status}
+		\begin{itemize}
+			\item jméno
+		\end{itemize}
+	\item \texttt{User}
+		\begin{itemize}
+			\item jméno
+			\item příjmení
+		\end{itemize}
+	\item \texttt{Comment}
+		\begin{itemize}
+			\item obsah komentáře
+		\end{itemize}
+\end{itemize}
+
 
 %% End of the whole document
 \end{document}
+
+
+
