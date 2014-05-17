@@ -132,6 +132,7 @@ fulltextové vyhledávání, Elasticsearch, Apache Lucene, systém pro správu c
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \chapter{Úvod}
+\label{UvodChapter}
 Vývoj počítačového software je složitý proces. Při vývoji vzniká mnoho požadavků, které je potřeba evidovat, např. vzniklé chyby, žádosti o novou funkčnost apod. Pro usnadnění evidence těchto požadavků vznikly systémy označované jako systémy pro správu požadavku (\emph{issue tracker}). Tyto systémy si kladou za cíl pomoci zajistit kvalitu produktu při vývoji, a to tak, že budou sdružovat veškeré informace o požadavcích na jednom místě a poskytne prostředky pro jejich správu.  Jedním z nich je systém eShoe.
 
 \emph{eShoe} (název odvozen od výslovnosti anglického slova \uv{issue}) je pracovní název pro nově vznikající volně širitelný systém pro správu požadavků na platformě Java. Jeho kostra je výstupem diplomové práce Moniky Gottvaldové \cite{eShoeDiplomka} a je hostován na serveru GitHub\footnote{\texttt{https://github.com/MonikaGottvaldova/eShoe}}. V současné době je eShoe ve fázi prototypu, jenž se neustále vyvíjí. 
@@ -139,6 +140,7 @@ Vývoj počítačového software je složitý proces. Při vývoji vzniká mnoho
 Čím je projekt větší, tím více při jeho vývoji požadavků vzniká a nastává problém, jak se ve velkém množství požadavků efektivně orientovat. Toho je většinou docíleno vyhledáváním, které umožní na základě zadané fráze najít relevantní výsledky. 
 
 \section{Cíle práce}
+\label{CilePrace}
 Cílem této práce je rozšířit existující implementaci systému pro správu požadavků eShoe o možnost fulltextového vyhledávání, které bude splňovat základní požadavky na použitelnost a umožní efektivní vyhledávání v požadavcích. 
 
 Hlavní cíl lze rozdělit na několik menších částí. První část spočívá v seznámení se s volně širitelnými technologiemi pro implementaci fulltextového vyhledávání na platformě Java. Je nutné pochopit, jak fulltextové vyhledávání funguje, jaké možnosti nabízí a jak lze jeho vlastností využít k co nejpoužitelnějšímu vyhledávání v systému.
@@ -887,7 +889,32 @@ Následuje seznam hlavních entit a jejich vlastností, které jsou importovány
 
 \chapter{Závěr}
 \label{ZaverChapter}
-Závěr
+
+\section{Zhodnocení výsledků práce}
+Cílem práce bylo implementovat fulltextové vyhledávání v systému pro správu požadavků eShoe a poskytnout tak uživateli možnost vyhledávat požadavky podle zadaných kritérií. Jednotlivé části cíle uvedené v sekci \ref{CilePrace} byly splněny následovně:
+\begin{itemize}
+	\item Pochopení principů fulltextového vyhledávání a seznámení se s dostupnými technologiemi na platformě Java: V rámci práce byly vysvětleny principy, na kterých fulltextové vyhledání funguje a uvedeny příklady problémů, které dokáže fulltextové vyhledávání vyřešit oproti vyhledávání pomocí SQL. Dále byly uvedeny tři konkrétní technologie pro implementaci fulltextového vyhledávání na platformě Java a popsány jejich charakteristiky a možnosti.
+
+	\item Zvládnutí indexace entit v systému eShoe: V rámci práce byl navržen a implementován mechanismus pro indexaci entit, na jejichž základě uživatel hledá odpovídající výsledky. Práce uvádí seznam dotazů, na které je systém schopen odpovědět a na jejich základě popisuje, které entity byly k indexaci vybrány.
+
+	\item Vytvoření prostředku pro zadávání dotazů pro vyhledávání: Pro systém eShoe byl navržen dotazovací jazyk umožňující pokrýt všechny typy dotazů, které byly pro systém specifikovány.
+
+	\item Import testovacích dat: Pro realizaci testování byl naprogramován mechanismus pro import požadavků z existujícícho systému pro správu chyb Red Hat Bugzilla. Importovaná data jsou vybrána uživatelem na základě ID požadavku, uživatel tak může přesně zvolit, které požadavky budou do systému importovány.
+
+	\item Otestování funkčnosti vyhledávání: Součástí implementace jsou i testy pokrývající veškerou funkčnost vyhledávání. Otestovány jsou všechny části implementace, indexační mechanismus, vyhledávání i import testovacích dat.
+\end{itemize}
+
+Jako přidanou hodnotu práce lze kromě implementace samotného vyhledávání v systému eShoe považovat i vznik nástroje Elasticsearch-Annotations, který jako první poskytuje indexační možnosti pro Elasticsearch na bázi anotací.
+
+\section{Možnosti pokračování}
+Možnosti rozvíjení implementace dál lze hodnotit ze dvou pohledů: vylepšení vyhledávání v samotném systému a další směr projektu Elasticsearch-Annotation. Pro vyhledávání v systému se nabízí:
+\begin{itemize}
+	\item Zdokonalit uživatelské rozhraní pro vyhledávání. Kromě vytvoření graficky přívětivějšího vzhledu se jedná např. o možnost našeptávání hledané fráze, poskytnutí statistik o nalezených požadavcích, filtrování na základě dalších vlastností entit.
+	\item Vystavit funkčnost fulltextového vyhledávání skrze REST API.
+\end{itemize}
+
+Z hlediska pokračování projektu Elasticsearch-Annotations je ambicí začlenit jej přímo do projektu Elasticsearch, tedy otevřít jej komunitě. Pro splnění tohoto cíle bude zapotřebí doprogramovat velké množství funkcí, např. možnost použití anotace \texttt{@FieldBridge} jako v Hibernate Search, umožnit větší množstí nastavení mapování skrze anotace atd.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
