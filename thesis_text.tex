@@ -732,6 +732,7 @@ Může se však stát, že entita může mít odkaz na entitu stejné třídy, n
 Pro vyhledávání nabízí Elasticsearch-Annotation pouze jednoduchou pomocnou funkcionalitu. Jediná třída vyhledávání části je \texttt{SearchManager}, která má metody \texttt{search} a \texttt{get}. Metoda \texttt{search} přebírá dva parametry -- \texttt{SearchResponse} reprezentující vyhledávací dotaz pro Elasticsearch klienta a objekt typu \texttt{Class}. Metoda \texttt{search} pouze zpracuje nalezené výsledky dotazu tak, že z~vráceného JSON objektu vytvoří objekt předané třídy a naplní atributy označené anotací \texttt{@Field} hodnotami z~výsledku. Metoda \texttt{get} funguje analogicky, jako první parametr však vyžaduje objekt typu \texttt{GetResponse}, což je požadavek na jeden konkrétní dokument.
 
 \section{Testy}
+\label{ElasticsearchAnnotationsTesty}
 Celý projekt Elasticsearch-Annotations je pokrytý jednotkovými a integračními testy. Jednotkové testy podrobně testují chování jednotlivých procesorů. Testováno je například chování na nenastavených atributech, dále správná detekce cyklické indexace či přejmenování klíče pole. Dále jsou k~dispozici integrační testy, které testují správnou spolupráci všech komponent a že i při kombinaci více anotací systém vrací správné výsledky. 
 
 Poslední fází je integrační test spolupráce třídy \texttt{AnnotationIndexManager} s~Elasticsearch serverem, kterého je docíleno použitím testovacího nástroje \emph{elasticsearch-test}\footnote{\texttt{https://github.com/tlrx/elasticsearch-test}}. Tento nástroj umožňuje v~prostředí JUnit testů snadno nastartovat Elasticsearch server pro testovací účely.
@@ -786,11 +787,15 @@ Byl vytvořen vlastní dotazovací jazyk pro účely eShoe. Ukázka \ref{Dotazov
 \begin{lstlisting}[caption =  Gramatika dotazovacího jazyka eShoe, label = DotazovaciJazykGramatika]
 dotaz -> konjunkce
 konjunkce -> vyraz | vyraz AND konjunkce
-vyraz -> rovnost | mnozina | fulltext
+vyraz -> rovnost | mnozina | fulltext | mensi | mensi_rovno | vetsi | vetsi_rovno
 rovnost -> <jmeno_atributu> = "<hodnota_atributu>"
 mnozina -> <jmeno_atributu> = 
 	(<hodnoty_v_uvozovkach_oddeleny_carkami>)
 fulltext -> text = "<fulltextova_fraze>"
+mensi -> <jmeno_atributu> < "<hodnota_atributu>"
+mensi_rovno -> <jmeno_atributu> <= "<hodnota_atributu>"
+vetsi -> <jmeno_atributu> > "<hodnota_atributu>"
+vetsi_rovno -> <jmeno_atributu> >=  "<hodnota_atributu>"
 \end{lstlisting}
 
 Podotkněme, že operátor \textasciitilde  (vlnka) je použitelný pouze s atributem \uv{text} a dohromady označují frázi pro fulltextové vyhledávání.
@@ -803,11 +808,15 @@ Ukázky výsledného dotazovacího jazyka jsou uvedeny v kapitole \ref{Specifika
 \begin{lstlisting}[frame=single]
 query: andExpression;
 andExpression: expression (AND! expression)*;
-expression: equals | in | tilda;
+expression: equals | in | tilda | lt | gt | lte | gte;
 equals: FIELD_NAME '='^ fieldValue;
 in: FIELD_NAME IN^
     '('! fieldValue (','! fieldValue)*')'!;
 tilda: FIELD_NAME '~'^ fieldValue;
+lt: FIELD_NAME LT^ fieldValue;
+gt: FIELD_NAME GT^ fieldValue;
+gte: FIELD_NAME GTE^ fieldValue;
+lte: FIELD_NAME LTE^ fieldValue;
 fieldValue: FIELD_VALUE;
 \end{lstlisting}
 \caption{Gramatika dotazovacího jazyka z obrázku \ref{DotazovaciJazykGramatika} zapsána pomocí ANTLR}
@@ -886,6 +895,12 @@ Následuje seznam hlavních entit a jejich vlastností, které jsou importovány
 \end{itemize}
 
 \section{Testy}
+Součástí zadání práce a specifikace (viz. \ref{SpecifikacePozadavku}) je naprogramování automatizovaných testů, které ověří správnost řešení. Správná funkčnost indexační části je pokryta testy přítomnými v projektu Elasticsearch-Annotations. Zbývá ověřit správnou funkčnost vyhledávání v systému eShoe.
+
+Pro implementaci vyhledávacích testů je opět použit project \texttt{elasticsearch-test} (viz. \ref{ElasticsearchAnnotationsTesty}). Otestování správné funkčnosti vyhledávání spočívá především v ujištění, že systém je schopen odpovědět na všechny typy dotazů, které byly definovány v kapitole \ref{SpecifikacePozadavku}. Pro tento účel byly vytvořeny 4 testovací entity, jejichž hodnoty jsou uvedeny v příloze \ref{PrilohaTestovaciEntity}. Všechny testy jsou přítomny ve třídě \texttt{FulltextSearchTest}. 
+
+Pro každý typ dotazu je přítomna zvláští testovací metoda, která ověřuje správnou funkčnost pro daný typ dotazu. Rovněž je testována možnost kombinace více podmínek pomocí operátoru \texttt{AND} či možnost shody hodnoty atributu s jednou nabízených hodnot pomocí operátoru \texttt{IN}. Zvláštním případem je pak otestování vrácení relevantnějšího výsledku dříve než ostatních (obsahuje více klíčových slov). 
+
 
 \chapter{Závěr}
 \label{ZaverChapter}
@@ -899,7 +914,7 @@ Cílem práce bylo implementovat fulltextové vyhledávání v systému pro spr�
 
 	\item Vytvoření prostředku pro zadávání dotazů pro vyhledávání: Pro systém eShoe byl navržen dotazovací jazyk umožňující pokrýt všechny typy dotazů, které byly pro systém specifikovány.
 
-	\item Import testovacích dat: Pro realizaci testování byl naprogramován mechanismus pro import požadavků z existujícícho systému pro správu chyb Red Hat Bugzilla. Importovaná data jsou vybrána uživatelem na základě ID požadavku, uživatel tak může přesně zvolit, které požadavky budou do systému importovány.
+	\item Import dat: Pro demonstraci vyhledávání byl naprogramován mechanismus pro import požadavků z existujícícho systému pro správu chyb Red Hat Bugzilla. Importovaná data jsou vybrána uživatelem na základě ID požadavku, uživatel tak může přesně zvolit, které požadavky budou do systému importovány. Počet požadavků, které lze do systému importovat, není teoreticky omezen. 
 
 	\item Otestování funkčnosti vyhledávání: Součástí implementace jsou i testy pokrývající veškerou funkčnost vyhledávání. Otestovány jsou všechny části implementace, indexační mechanismus, vyhledávání i import testovacích dat.
 \end{itemize}
